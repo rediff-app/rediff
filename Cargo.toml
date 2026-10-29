@@ -1,0 +1,29 @@
+[package]
+name = "rediff"
+version = "0.1.0"
+edition = "2024"
+description = "View git diffs in the browser"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[dependencies]
+anyhow = "1.0.104"
+axum = "0.8.9"
+clap = { version = "4.6.7", features = ["derive"] }
+getrandom = "0.4.3"
+ignore = "0.4.34"
+lru = "0.19.0"
+mimalloc = "0.1.52"
+notify = "8.2.1"
+open = "5.4.5"
+rust-embed = { version = "8.13.0", features = ["mime-guess"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+similar = "3.2.1"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "process", "net", "sync", "time"] }
+tokio-stream = { version = "0.1.19", features = ["sync"] }
+tower-http = { version = "0.7.1", features = ["compression-gzip", "compression-br", "compression-zstd"] }
