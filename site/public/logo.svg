@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="rediff">
+  <rect x="1" y="1" width="126" height="126" rx="28" fill="#0d1117" stroke="#3d444d" stroke-width="2"/>
+  <path d="M64 22v84" stroke="#3d444d" stroke-width="2" stroke-linecap="round"/>
+  <g fill="#6e7681">
+    <rect x="22" y="26" width="30" height="12" rx="6"/>
+    <rect x="72" y="26" width="30" height="12" rx="6"/>
+    <rect x="22" y="90" width="20" height="12" rx="6"/>
+    <rect x="72" y="90" width="20" height="12" rx="6"/>
+  </g>
+  <g fill="#f85149">
+    <rect x="22" y="42" width="34" height="12" rx="6"/>
+    <rect x="22" y="58" width="24" height="12" rx="6"/>
+  </g>
+  <g fill="#3fb950">
+    <rect x="72" y="42" width="34" height="12" rx="6"/>
+    <rect x="72" y="58" width="28" height="12" rx="6"/>
+    <rect x="72" y="74" width="20" height="12" rx="6"/>
+  </g>
+</svg>

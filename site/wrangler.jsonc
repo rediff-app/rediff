@@ -1,0 +1,16 @@
+// Landing page for https://rediff.app, served as static assets on Cloudflare Workers.
+// Deploy with: npx wrangler deploy
+{
+  "name": "rediff-site",
+  "compatibility_date": "2026-10-01",
+  // public/logo.svg mirrors the repo's logo; refresh it before every deploy.
+  "build": {
+    "command": "cp ../assets/logo.svg public/logo.svg"
+  },
+  "assets": {
+    "directory": "./public"
+  },
+  "routes": [
+    { "pattern": "rediff.app", "custom_domain": true }
+  ]
+}
