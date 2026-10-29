@@ -1,4 +1,4 @@
-import { batch, createSignal, type Accessor, type Setter } from 'solid-js';
+import { batch, createMemo, createSignal, type Accessor, type Setter } from 'solid-js';
 import { AuthError, fetchCommits, fetchDiff, fetchListing } from './api';
 import { highlight, type LineTokens } from './highlight';
 import { langFor } from './langs';
@@ -47,6 +47,40 @@ export const [selected, setSelected] = createSignal<string>();
 export const [commits, setCommits] = createSignal<Commit[]>([]);
 export const [moreCommits, setMoreCommits] = createSignal(false);
 export const [baseTitle, setBaseTitle] = createSignal('');
+export const [filterQuery, setFilterQuery] = createSignal('');
+export const [unviewedOnly, setUnviewedOnly] = createSignal(false);
+const [viewed, setViewed] = createSignal(new Map<string, string>());
+const viewedKey = (f: FileEntry) => JSON.stringify([selected() ?? '', f.path]);
+export const isViewed = (f: FileEntry) => viewed().get(viewedKey(f)) === f.version;
+export const viewedCount = createMemo(() => files().filter(isViewed).length);
+export const visibleFiles = createMemo(() => {
+  const query = filterQuery().trim().toLowerCase();
+  return files().filter((f) =>
+    (!query || f.path.toLowerCase().includes(query) || f.oldPath?.toLowerCase().includes(query)) &&
+    (!unviewedOnly() || !isViewed(f)),
+  );
+});
+
+function storedView(): 'unified' | 'split' {
+  try { return localStorage.getItem('rediff.diffView') === 'split' ? 'split' : 'unified'; }
+  catch { return 'unified'; }
+}
+export const [diffView, setDiffView] = createSignal(storedView());
+export function changeDiffView(view: 'unified' | 'split') {
+  setDiffView(view);
+  try { localStorage.setItem('rediff.diffView', view); } catch { /* Optional preference. */ }
+}
+
+function storedWrapLines(): boolean {
+  try { return localStorage.getItem('rediff.wrapLines') !== '0'; }
+  catch { return true; }
+}
+export const [wrapLines, setWrapLines] = createSignal(storedWrapLines());
+export function toggleWrapLines() {
+  const wrap = !wrapLines();
+  setWrapLines(wrap);
+  try { localStorage.setItem('rediff.wrapLines', wrap ? '1' : '0'); } catch { /* Optional preference. */ }
+}
 
 const loaded = new Map<string, Loaded>();
 const collapsedOverride = new Map<string, boolean>();
@@ -72,10 +106,27 @@ export function toggleCollapsed(f: FileEntry) {
   bump();
 }
 
+export function collapseAll(collapse: boolean) {
+  for (const f of visibleFiles()) collapsedOverride.set(f.path, collapse);
+  bump();
+}
+
+export function toggleViewed(f: FileEntry) {
+  const next = new Map(viewed());
+  const value = !isViewed(f);
+  if (value) next.set(viewedKey(f), f.version);
+  else next.delete(viewedKey(f));
+  batch(() => {
+    setViewed(next);
+    collapsedOverride.set(f.path, value);
+    bump();
+  });
+}
+
 let scrollImpl: (i: number) => void = () => {};
 export const setScrollImpl = (fn: (i: number) => void) => (scrollImpl = fn);
 export const scrollToFile = (i: number) => {
-  if (files().length) scrollImpl(Math.max(0, Math.min(i, files().length - 1)));
+  if (visibleFiles().length) scrollImpl(Math.max(0, Math.min(i, visibleFiles().length - 1)));
 };
 
 let refreshing: Promise<void> | undefined;
@@ -98,6 +149,16 @@ export function refresh(): Promise<void> {
         const keep = new Set(listing.files.map((f) => f.path));
         for (const path of loaded.keys()) if (!keep.has(path)) loaded.delete(path);
         batch(() => {
+          const reviews = new Map(viewed());
+          for (const f of listing.files) {
+            const reviewedVersion = reviews.get(viewedKey(f));
+            // A changed file needs another review and should become visible again.
+            if (reviewedVersion !== undefined && reviewedVersion !== f.version) {
+              collapsedOverride.delete(f.path);
+              reviews.delete(viewedKey(f));
+            }
+          }
+          if (reviews.size !== viewed().size) setViewed(reviews);
           setTitle(listing.title);
           setFiles(treeOrder(listing.files));
           setStatus('ready');
@@ -122,6 +183,8 @@ export function select(commit: string | undefined) {
     setSelected(commit);
     setFiles([]);
     setCurrent(0);
+    setFilterQuery('');
+    setUnviewedOnly(false);
     if (status() !== 'unauthorized') setStatus('loading');
   });
   refresh();

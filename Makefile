@@ -17,6 +17,7 @@ install: web
 test:
 	cargo test
 	cd web && npx tsc --noEmit
+	cd web && npm test
 
 # Rebuild the frontend on change; a debug `cargo run` serves web/dist from disk.
 dev-web: web/node_modules

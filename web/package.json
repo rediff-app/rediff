@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "test": "tsc --ignoreConfig --target ES2022 --module ESNext --outDir .test-build src/rowLayout.ts && node --test tests/rowLayout.test.mjs",
     "watch": "vite build --watch"
   },
   "dependencies": {

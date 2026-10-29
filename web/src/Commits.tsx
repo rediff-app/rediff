@@ -1,6 +1,7 @@
 import { createSelector, For, Show } from 'solid-js';
 import { baseTitle, commits, moreCommits, select, selected, showMoreCommits } from './store';
 import type { Commit } from './types';
+import { Icon } from './Icon';
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -20,18 +21,21 @@ function ago(time: number): string {
 }
 
 /** The diff given on the command line, then the current branch's commits, newest first. */
-export function CommitList() {
+export function CommitList(p: { onClose: () => void }) {
   const isSelected = createSelector(selected);
   return (
-    <nav class="commits">
-      <div
+    <nav class="commits" aria-label="Commit history">
+      <div class="panel-heading"><h2><Icon name="history" />Commit history</h2><button class="icon-button" aria-label="Hide commit history" onClick={p.onClose}><Icon name="close" size={14} /></button></div>
+      <button
         class="commit base"
         classList={{ current: selected() === undefined }}
+        aria-current={selected() === undefined ? 'true' : undefined}
         title={baseTitle()}
         onClick={() => select(undefined)}
       >
-        <span class="subject">{baseTitle()}</span>
-      </div>
+        <span class="subject"><Icon name="diff" />Current comparison</span>
+        <span class="meta">{baseTitle()}</span>
+      </button>
       <For each={commits()}>{(c) => <CommitRow c={c} current={isSelected(c.id)} />}</For>
       <Show when={moreCommits()}>
         <button class="more" onClick={showMoreCommits}>
@@ -45,16 +49,17 @@ export function CommitList() {
 function CommitRow(p: { c: Commit; current: boolean }) {
   const c = p.c;
   return (
-    <div
+    <button
       class="commit"
       classList={{ current: p.current }}
+      aria-current={p.current ? 'true' : undefined}
       title={`${c.id}\n${c.author}, ${new Date(c.time * 1000).toLocaleString()}\n\n${c.subject}`}
       onClick={() => select(c.id)}
     >
-      <span class="subject">{c.subject}</span>
+      <span class="subject"><Icon name="commit" />{c.subject}</span>
       <span class="meta">
         <span class="sha">{c.short}</span> {c.author} · {ago(c.time)}
       </span>
-    </div>
+    </button>
   );
 }
