@@ -1,6 +1,6 @@
 [package]
 name = "rediff"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "View git diffs in the browser"
 repository = "https://github.com/rediff-app/rediff"
