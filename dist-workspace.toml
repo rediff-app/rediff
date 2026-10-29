@@ -15,5 +15,7 @@ targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "aarch64-pc-wind
 install-path = "CARGO_HOME"
 # Whether to install an updater program
 install-updater = true
+# dist 0.32 pins axoupdater 0.10.0, which has no aarch64-pc-windows-msvc build
+always-use-latest-updater = true
 # Build the embedded frontend (web/dist is gitignored) before compiling
 github-build-setup = "../build-setup.yml"
