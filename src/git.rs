@@ -13,6 +13,8 @@ const NULL_OID: &str = "0000000000000000000000000000000000000000";
 const MAX_UNTRACKED_SCAN: u64 = 8 << 20;
 /// Some inputs make some git versions' diff algorithms go quadratic; don't hang forever.
 const PATCH_TIMEOUT: Duration = Duration::from_secs(60);
+/// Fields of a [`Commit`], NUL-separated, one commit per line (subjects never contain newlines).
+const LOG_FORMAT: &str = "--format=%H%x00%h%x00%P%x00%an%x00%at%x00%s";
 
 pub struct Options {
     pub revs: Vec<String>,
@@ -27,15 +29,35 @@ pub struct Options {
 pub struct Repo {
     pub root: PathBuf,
     pub git_dir: PathBuf,
-    pub title: String,
-    /// Revision arguments for `git diff`, e.g. `["HEAD"]` or `["--cached", "HEAD"]`.
-    revs: Vec<String>,
+    /// What the command line asked to compare.
+    pub base: Spec,
     pathspecs: Vec<String>,
-    untracked: bool,
     /// Resolved up front so line counts in the listing match the diffs, and
     /// so cached diffs are keyed by the algorithm that produced them.
     algorithm: String,
     context: u32,
+}
+
+/// The two sides of a diff.
+#[derive(Clone)]
+pub struct Spec {
+    pub title: String,
+    /// Revision arguments for `git diff`, e.g. `["HEAD"]` or `["--cached", "HEAD"]`.
+    revs: Vec<String>,
+    /// The right side is the working tree, and untracked files are part of the diff.
+    untracked: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Commit {
+    pub id: String,
+    pub short: String,
+    #[serde(skip)]
+    parents: Vec<String>,
+    pub author: String,
+    /// Author date, seconds since the epoch.
+    pub time: i64,
+    pub subject: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -82,12 +104,7 @@ impl Repo {
         let git_dir = PathBuf::from(lines.next().context("git rev-parse: missing git dir")?);
         let prefix = lines.next().unwrap_or_default();
 
-        let has_head = git(&root)
-            .args(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"])
-            .stdout(Stdio::null())
-            .status()
-            .await?
-            .success();
+        let has_head = head_commit(&root).await?.is_some();
         // An unborn branch has no HEAD yet: compare against the empty tree.
         let (head, head_label) = if has_head {
             ("HEAD", "HEAD")
@@ -138,17 +155,19 @@ impl Repo {
         Ok(Repo {
             root,
             git_dir,
-            title,
-            revs,
+            base: Spec {
+                title,
+                revs,
+                untracked: worktree && opts.untracked,
+            },
             pathspecs,
-            untracked: worktree && opts.untracked,
             algorithm,
             context: opts.context,
         })
     }
 
     /// All changed files with line counts, sorted by path.
-    pub async fn list_files(&self) -> Result<Vec<FileEntry>> {
+    pub async fn list_files(&self, spec: &Spec) -> Result<Vec<FileEntry>> {
         let tracked = async {
             let out = run(
                 self.git()
@@ -163,7 +182,7 @@ impl Repo {
                         "--no-color",
                     ])
                     .arg(format!("--diff-algorithm={}", self.algorithm))
-                    .args(&self.revs)
+                    .args(&spec.revs)
                     .arg("--")
                     .args(&self.pathspecs),
                 &[0],
@@ -172,7 +191,7 @@ impl Repo {
             parse_raw_numstat(&out)
         };
         let untracked = async {
-            if self.untracked {
+            if spec.untracked {
                 self.list_untracked().await
             } else {
                 Ok(Vec::new())
@@ -228,7 +247,7 @@ impl Repo {
     }
 
     /// Unified diff of a single file, as printed by git.
-    pub async fn file_patch(&self, f: &FileEntry) -> Result<Vec<u8>> {
+    pub async fn file_patch(&self, spec: &Spec, f: &FileEntry) -> Result<Vec<u8>> {
         let mut cmd = self.git();
         cmd.args(["diff", "--no-color", "--no-ext-diff"])
             .arg(format!("--diff-algorithm={}", self.algorithm))
@@ -240,12 +259,55 @@ impl Repo {
         }
         // Passing both paths of a rename lets -M pair them up again.
         cmd.arg("-M")
-            .args(&self.revs)
+            .args(&spec.revs)
             .arg("--")
             .args(f.old_path.as_ref())
             .arg(&f.path)
             .env("GIT_LITERAL_PATHSPECS", "1");
         with_timeout(run(&mut cmd, &[0])).await
+    }
+
+    /// The commit HEAD points to; None on an unborn branch.
+    pub async fn head(&self) -> Result<Option<String>> {
+        head_commit(&self.root).await
+    }
+
+    /// The newest commits from `head` on that touch the pathspecs.
+    pub async fn commits(&self, head: &str, limit: usize) -> Result<Vec<Commit>> {
+        self.log(&[&format!("-n{limit}"), head], &self.pathspecs)
+            .await
+    }
+
+    /// One commit against its first parent, or against the empty tree for a root commit.
+    pub async fn commit_spec(&self, id: &str) -> Result<Spec> {
+        // Only object ids: anything else could be read as an option or a revision range.
+        if !(4..=64).contains(&id.len()) || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
+            bail!("not a commit id: {id}");
+        }
+        let c = self
+            .log(&["--no-walk", id], &[])
+            .await?
+            .pop()
+            .with_context(|| format!("no such commit: {id}"))?;
+        let parent = c.parents.first().map_or(EMPTY_TREE, String::as_str);
+        Ok(Spec {
+            title: format!("{} {}", c.short, c.subject),
+            revs: vec![parent.into(), c.id],
+            untracked: false,
+        })
+    }
+
+    async fn log(&self, args: &[&str], pathspecs: &[String]) -> Result<Vec<Commit>> {
+        let out = run(
+            self.git()
+                .args(["log", "--no-color", "--no-show-signature", LOG_FORMAT])
+                .args(args)
+                .arg("--")
+                .args(pathspecs),
+            &[0],
+        )
+        .await?;
+        parse_log(&out)
     }
 
     fn git(&self) -> Command {
@@ -305,6 +367,16 @@ fn git(dir: &Path) -> Command {
         .stdin(Stdio::null())
         .kill_on_drop(true);
     cmd
+}
+
+async fn head_commit(root: &Path) -> Result<Option<String>> {
+    let out = run(
+        git(root).args(["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]),
+        &[0, 1],
+    )
+    .await?;
+    let id = String::from_utf8_lossy(&out).trim().to_string();
+    Ok((!id.is_empty()).then_some(id))
 }
 
 /// The algorithm `git diff` uses here; git's own default is myers.
@@ -417,6 +489,28 @@ fn parse_raw_numstat(buf: &[u8]) -> Result<Vec<FileEntry>> {
     Ok(files)
 }
 
+/// Parses `git log` output in [`LOG_FORMAT`].
+fn parse_log(buf: &[u8]) -> Result<Vec<Commit>> {
+    String::from_utf8_lossy(buf)
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let fields: Vec<&str> = line.splitn(6, '\0').collect();
+            let &[id, short, parents, author, time, subject] = fields.as_slice() else {
+                bail!("unexpected git log output: {line}");
+            };
+            Ok(Commit {
+                id: id.into(),
+                short: short.into(),
+                parents: parents.split_whitespace().map(Into::into).collect(),
+                author: author.into(),
+                time: time.parse().unwrap_or_default(),
+                subject: subject.into(),
+            })
+        })
+        .collect()
+}
+
 /// Line count, binary flag and "too large" flag of an untracked file.
 fn scan_untracked(path: &Path) -> (u32, bool, bool) {
     let Ok(meta) = std::fs::symlink_metadata(path) else {
@@ -483,5 +577,25 @@ mod tests {
         );
         assert_eq!((files[2].add, files[2].del, files[2].binary), (2, 1, false));
         assert_eq!(files[2].new_oid, NULL_OID);
+    }
+
+    #[test]
+    fn log() {
+        let o1 = "ce013625030ba8dba906f756967f9e9ca394464a";
+        let o2 = "8352675d67aed6625ece79af41c27fdb4ee2e867";
+        let out = format!(
+            "{o2}\08352675\0{o1}\0A U Thor\01700000000\0Merge: a\0b\n\
+             {o1}\0ce01362\0\0Someone\01600000000\0Initial\n"
+        );
+        let commits = parse_log(out.as_bytes()).unwrap();
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].parents, [o1]);
+        assert_eq!(commits[0].subject, "Merge: a\0b");
+        assert_eq!(
+            (commits[0].author.as_str(), commits[0].time),
+            ("A U Thor", 1700000000)
+        );
+        assert!(commits[1].parents.is_empty());
+        assert_eq!(commits[1].short, "ce01362");
     }
 }

@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
             state.token
         )
     };
-    eprintln!("rediff: {}", state.repo.title);
+    eprintln!("rediff: {}", state.repo.base.title);
     let local = if cli.host.is_unspecified() {
         let local = url(IpAddr::V4(Ipv4Addr::LOCALHOST));
         eprintln!("  local:   {local}");

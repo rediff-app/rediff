@@ -17,6 +17,23 @@ export interface Listing {
   files: FileEntry[];
 }
 
+export interface Commit {
+  id: string;
+  short: string;
+  author: string;
+  /** author date, seconds since the epoch */
+  time: number;
+  subject: string;
+}
+
+export interface CommitLog {
+  /** title of the diff given on the command line */
+  base: string;
+  commits: Commit[];
+  /** there are older commits */
+  more: boolean;
+}
+
 export const CTX = 0;
 export const ADD = 1;
 export const DEL = 2;

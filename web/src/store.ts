@@ -1,11 +1,12 @@
 import { batch, createSignal, type Accessor, type Setter } from 'solid-js';
-import { AuthError, fetchDiff, fetchListing } from './api';
+import { AuthError, fetchCommits, fetchDiff, fetchListing } from './api';
 import { highlight, type LineTokens } from './highlight';
 import { langFor } from './langs';
 import { treeOrder } from './tree';
-import { ADD, CTX, DEL, type FileDiff, type FileEntry } from './types';
+import { ADD, CTX, DEL, type Commit, type FileDiff, type FileEntry } from './types';
 
 const MAX_INFLIGHT = 4;
+const COMMIT_PAGE = 100;
 /** Larger diffs are shown without syntax highlighting. */
 const MAX_HIGHLIGHT_ROWS = 20_000;
 const COLLAPSE_LINES = 3_000;
@@ -41,6 +42,11 @@ export const [status, setStatus] = createSignal<'loading' | 'ready' | 'unauthori
 export const [errorText, setErrorText] = createSignal('');
 export const [live, setLive] = createSignal(false);
 export const [current, setCurrent] = createSignal(0);
+/** The commit being shown, or undefined for the diff given on the command line. */
+export const [selected, setSelected] = createSignal<string>();
+export const [commits, setCommits] = createSignal<Commit[]>([]);
+export const [moreCommits, setMoreCommits] = createSignal(false);
+export const [baseTitle, setBaseTitle] = createSignal('');
 
 const loaded = new Map<string, Loaded>();
 const collapsedOverride = new Map<string, boolean>();
@@ -68,7 +74,9 @@ export function toggleCollapsed(f: FileEntry) {
 
 let scrollImpl: (i: number) => void = () => {};
 export const setScrollImpl = (fn: (i: number) => void) => (scrollImpl = fn);
-export const scrollToFile = (i: number) => scrollImpl(Math.max(0, Math.min(i, files().length - 1)));
+export const scrollToFile = (i: number) => {
+  if (files().length) scrollImpl(Math.max(0, Math.min(i, files().length - 1)));
+};
 
 let refreshing: Promise<void> | undefined;
 let refreshAgain = false;
@@ -82,8 +90,11 @@ export function refresh(): Promise<void> {
   refreshing = (async () => {
     do {
       refreshAgain = false;
+      const commit = selected();
       try {
-        const listing = await fetchListing();
+        const listing = await fetchListing(commit);
+        // Another commit was selected meanwhile; that asked for another round.
+        if (commit !== selected()) continue;
         const keep = new Set(listing.files.map((f) => f.path));
         for (const path of loaded.keys()) if (!keep.has(path)) loaded.delete(path);
         batch(() => {
@@ -94,11 +105,53 @@ export function refresh(): Promise<void> {
         });
       } catch (e) {
         if (e instanceof AuthError) setStatus('unauthorized');
-        else batch(() => (setErrorText(String(e)), setStatus('error')));
+        else if (commit === selected()) batch(() => (setErrorText(String(e)), setStatus('error')));
       }
     } while (refreshAgain);
   })().finally(() => (refreshing = undefined));
   return refreshing;
+}
+
+/** Shows a commit's changes, or with no commit the diff given on the command line. */
+export function select(commit: string | undefined) {
+  if (commit === selected()) return;
+  loaded.clear();
+  collapsedOverride.clear();
+  wanted = [];
+  batch(() => {
+    setSelected(commit);
+    setFiles([]);
+    setCurrent(0);
+    if (status() !== 'unauthorized') setStatus('loading');
+  });
+  refresh();
+}
+
+let commitLimit = COMMIT_PAGE;
+let commitsSeq = 0;
+
+/** Reloads the commit list. Errors leave the list as it was. */
+export async function refreshCommits() {
+  const seq = ++commitsSeq;
+  try {
+    const log = await fetchCommits(commitLimit);
+    if (seq !== commitsSeq) return;
+    // Commits never change: keep the old objects so the list keeps their DOM.
+    const prev = new Map(commits().map((c) => [c.id, c]));
+    batch(() => {
+      setBaseTitle(log.base);
+      setCommits(log.commits.map((c) => prev.get(c.id) ?? c));
+      setMoreCommits(log.more);
+    });
+  } catch (e) {
+    if (e instanceof AuthError) setStatus('unauthorized');
+    else console.error('rediff: cannot list commits:', e);
+  }
+}
+
+export function showMoreCommits() {
+  commitLimit += COMMIT_PAGE;
+  refreshCommits();
 }
 
 const inflight = new Set<string>();
@@ -123,14 +176,16 @@ function pump() {
 }
 
 async function load(f: FileEntry) {
+  const commit = selected();
   let diff: FileDiff | undefined;
   let error: string | undefined;
   try {
-    diff = await fetchDiff(f);
+    diff = await fetchDiff(f, commit);
   } catch (e) {
     if (e instanceof AuthError) return void setStatus('unauthorized');
     error = String(e);
   }
+  if (commit !== selected()) return;
   let maxLine = 0;
   for (const [, o, n] of diff?.rows ?? []) maxLine = Math.max(maxLine, o, n);
   const [tokens, setTokens] = createSignal<(LineTokens | undefined)[]>();

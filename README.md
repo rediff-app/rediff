@@ -11,6 +11,8 @@ rediff HEAD~3..HEAD -- src  # 提交区间，限定路径
 rediff --help               # 全部选项：-U、--algorithm、--host、--port、--no-open、--no-watch ...
 ```
 
+页面最左侧是当前分支的提交列表（每次加载 100 个，可继续加载更多）。点一个提交查看它的改动（相对第一个父提交，根提交相对空树）；最上面一项回到命令行指定的 diff。给了路径参数时，列表只显示改过这些路径的提交。列表可以用顶栏左侧的按钮收起。
+
 启动后会打印两个地址：本机地址（`local`）和局域网地址（`network`，取默认路由所在网卡的 IP），在远程开发机上运行时可以直接在自己电脑的浏览器里打开 `network` 那个。URL 里带一次性 token，没有它无法读取 API。只想本机访问时加 `--host 127.0.0.1`。
 
 注意局域网访问走的是明文 HTTP：同一网络里能抓包的人可以看到 token 和 diff 内容，在不信任的网络里请用 `--host 127.0.0.1` 加 SSH 端口转发。
@@ -37,13 +39,14 @@ make test         # Rust 单测 + 前端类型检查
 ```
 src/
   main.rs     命令行参数、启动服务器、打开浏览器
-  git.rs      调用 git 命令：文件列表（--raw --numstat -z）、单文件 patch、未跟踪文件
+  git.rs      调用 git 命令：文件列表（--raw --numstat -z）、单文件 patch、未跟踪文件、提交列表
   patch.rs    把 patch 解析成紧凑的行数组 + 行内（词级）diff
-  server.rs   axum 路由、token 鉴权、diff 缓存、SSE 推送
+  server.rs   axum 路由、token 鉴权、diff 缓存、各提交的文件列表缓存、SSE 推送
   watch.rs    监听工作区 / index / refs，变化后推给前端
   assets.rs   rust-embed 内嵌的前端资源
 web/src/
-  store.ts          文件列表、按需加载 diff 的队列、折叠状态
+  store.ts          文件列表、按需加载 diff 的队列、折叠状态、当前选中的提交
+  Commits.tsx       提交列表（最左侧一栏）
   Sidebar.tsx       目录树侧边栏（单子目录链压缩显示，目录可折叠）
   tree.ts           树的排序与构建：每层目录在前、自然排序；diff 区用同一顺序
   DiffView.tsx      两级虚拟滚动（文件 + 行）

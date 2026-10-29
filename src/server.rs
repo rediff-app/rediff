@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::num::NonZeroUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -20,11 +21,15 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 
 use crate::assets;
-use crate::git::{FileEntry, Repo};
+use crate::git::{Commit, FileEntry, Repo, Spec};
 use crate::patch;
 
 /// Upper bound for serialized diffs kept in memory.
 const CACHE_BYTES: usize = 128 << 20;
+/// File listings of recently viewed commits.
+const COMMIT_LISTINGS: NonZeroUsize = NonZeroUsize::new(16).unwrap();
+/// Most commits the client may ask for at once; it asks for more page by page.
+const MAX_COMMITS: usize = 10_000;
 
 pub struct AppState {
     pub repo: Repo,
@@ -36,12 +41,16 @@ pub struct AppState {
     /// Bumped by the watcher; a listing from an older generation is stale.
     generation: AtomicU64,
     listing: tokio::sync::Mutex<Option<Arc<Listing>>>,
+    /// Commits never change, so neither do their listings.
+    commit_listings: tokio::sync::Mutex<LruCache<String, Arc<Listing>>>,
+    commit_log: tokio::sync::Mutex<Option<CommitLog>>,
     cache: Mutex<DiffCache>,
     events: broadcast::Sender<u64>,
 }
 
 pub struct Listing {
     generation: u64,
+    spec: Spec,
     files: Vec<FileEntry>,
     by_path: HashMap<String, usize>,
     json: Bytes,
@@ -53,6 +62,22 @@ struct ListingBody<'a> {
     files: &'a [FileEntry],
 }
 
+/// The last commit list served; still valid while HEAD stays put.
+struct CommitLog {
+    head: Option<String>,
+    limit: usize,
+    json: Bytes,
+}
+
+#[derive(Serialize)]
+struct CommitsBody<'a> {
+    /// Title of the diff given on the command line.
+    base: &'a str,
+    commits: &'a [Commit],
+    /// There are older commits than these.
+    more: bool,
+}
+
 impl AppState {
     pub fn new(repo: Repo, token: String, port: u16, watching: bool) -> Self {
         AppState {
@@ -62,6 +87,8 @@ impl AppState {
             cookie: format!("rediff_{port}"),
             generation: AtomicU64::new(0),
             listing: tokio::sync::Mutex::new(None),
+            commit_listings: tokio::sync::Mutex::new(LruCache::new(COMMIT_LISTINGS)),
+            commit_log: tokio::sync::Mutex::new(None),
             cache: Mutex::new(DiffCache {
                 map: LruCache::unbounded(),
                 bytes: 0,
@@ -77,9 +104,37 @@ impl AppState {
         if let Some(l) = slot.as_ref().filter(|l| l.generation == generation) {
             return Ok(l.clone());
         }
-        let files = self.repo.list_files().await?;
+        let l = self
+            .build_listing(self.repo.base.clone(), generation)
+            .await?;
+        *slot = Some(l.clone());
+        Ok(l)
+    }
+
+    /// The file listing of one commit against its parent.
+    async fn commit_listing(&self, id: &str) -> Result<Arc<Listing>> {
+        let mut cache = self.commit_listings.lock().await;
+        if let Some(l) = cache.get(id) {
+            return Ok(l.clone());
+        }
+        let spec = self.repo.commit_spec(id).await?;
+        let l = self.build_listing(spec, 0).await?;
+        cache.put(id.to_string(), l.clone());
+        Ok(l)
+    }
+
+    /// The listing of a commit, or of the command line's diff when there is none.
+    async fn listing_for(&self, commit: Option<&str>) -> Result<Arc<Listing>> {
+        match commit {
+            Some(id) => self.commit_listing(id).await,
+            None => self.listing().await,
+        }
+    }
+
+    async fn build_listing(&self, spec: Spec, generation: u64) -> Result<Arc<Listing>> {
+        let files = self.repo.list_files(&spec).await?;
         let json = serde_json::to_vec(&ListingBody {
-            title: &self.repo.title,
+            title: &spec.title,
             files: &files,
         })?
         .into();
@@ -88,14 +143,40 @@ impl AppState {
             .enumerate()
             .map(|(i, f)| (f.path.clone(), i))
             .collect();
-        let l = Arc::new(Listing {
+        Ok(Arc::new(Listing {
             generation,
+            spec,
             files,
             by_path,
             json,
+        }))
+    }
+
+    /// The newest `limit` commits of the current branch, as JSON.
+    async fn commit_log(&self, limit: usize) -> Result<Bytes> {
+        let mut slot = self.commit_log.lock().await;
+        let head = self.repo.head().await?;
+        if let Some(c) = slot.as_ref().filter(|c| c.head == head && c.limit == limit) {
+            return Ok(c.json.clone());
+        }
+        let mut commits = match &head {
+            Some(head) => self.repo.commits(head, limit + 1).await?,
+            None => Vec::new(),
+        };
+        let more = commits.len() > limit;
+        commits.truncate(limit);
+        let json: Bytes = serde_json::to_vec(&CommitsBody {
+            base: &self.repo.base.title,
+            commits: &commits,
+            more,
+        })?
+        .into();
+        *slot = Some(CommitLog {
+            head,
+            limit,
+            json: json.clone(),
         });
-        *slot = Some(l.clone());
-        Ok(l)
+        Ok(json)
     }
 
     /// Called by the watcher when the working tree, index or refs changed.
@@ -134,6 +215,7 @@ pub fn router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .route("/api/files", get(files))
         .route("/api/diff", get(diff))
+        .route("/api/commits", get(commits))
         .route("/api/events", get(events))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
     Router::new()
@@ -145,19 +227,45 @@ pub fn router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
-async fn files(State(st): State<Arc<AppState>>) -> Result<Response, AppError> {
-    if !st.watching {
+#[derive(Deserialize)]
+struct FilesQuery {
+    /// Show this commit instead of the command line's diff.
+    commit: Option<String>,
+}
+
+async fn files(
+    State(st): State<Arc<AppState>>,
+    Query(q): Query<FilesQuery>,
+) -> Result<Response, AppError> {
+    if !st.watching && q.commit.is_none() {
         st.generation.fetch_add(1, Ordering::AcqRel);
     }
-    let l = st.listing().await?;
-    Ok((
+    let l = st.listing_for(q.commit.as_deref()).await?;
+    Ok(json_no_store(l.json.clone()))
+}
+
+#[derive(Deserialize)]
+struct CommitsQuery {
+    limit: Option<usize>,
+}
+
+async fn commits(
+    State(st): State<Arc<AppState>>,
+    Query(q): Query<CommitsQuery>,
+) -> Result<Response, AppError> {
+    let limit = q.limit.unwrap_or(100).clamp(1, MAX_COMMITS);
+    Ok(json_no_store(st.commit_log(limit).await?))
+}
+
+fn json_no_store(body: Bytes) -> Response {
+    (
         [
             (header::CONTENT_TYPE, "application/json"),
             (header::CACHE_CONTROL, "no-store"),
         ],
-        l.json.clone(),
+        body,
     )
-        .into_response())
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -165,6 +273,7 @@ struct DiffQuery {
     path: String,
     /// The version the client expects, from the listing.
     v: Option<String>,
+    commit: Option<String>,
 }
 
 async fn diff(
@@ -172,7 +281,7 @@ async fn diff(
     Query(q): Query<DiffQuery>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    let l = st.listing().await?;
+    let l = st.listing_for(q.commit.as_deref()).await?;
     let Some(f) = l.by_path.get(&q.path).map(|&i| &l.files[i]) else {
         return Ok((StatusCode::NOT_FOUND, "file is not part of the diff").into_response());
     };
@@ -200,7 +309,7 @@ async fn diff(
     let body = match cached {
         Some(body) => body,
         None => {
-            let raw = st.repo.file_patch(f).await?;
+            let raw = st.repo.file_patch(&l.spec, f).await?;
             let body: Bytes =
                 tokio::task::spawn_blocking(move || serde_json::to_vec(&patch::parse(&raw)))
                     .await??

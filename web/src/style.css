@@ -81,6 +81,29 @@ body {
   font-weight: 600;
 }
 
+.toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-left: -6px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  border-color: var(--border);
+}
+
+.toggle.on {
+  color: var(--fg);
+}
+
 .title {
   min-width: 0;
   overflow: hidden;
@@ -135,6 +158,74 @@ body {
   flex: 1;
   display: flex;
   min-height: 0;
+}
+
+/* ---- commit list ---- */
+
+.commits {
+  flex: none;
+  width: 260px;
+  overflow: auto;
+  padding: 8px 0;
+  border-right: 1px solid var(--border);
+}
+
+.commit {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 46px;
+  padding: 0 12px;
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 46px;
+}
+
+.commit:hover {
+  background: var(--panel);
+}
+
+.commit.current {
+  background: var(--current);
+}
+
+.commit .subject,
+.commit .meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit .meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.commit .sha {
+  font: 11px var(--mono);
+}
+
+.commit.base {
+  height: 34px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font: 12px var(--mono);
+}
+
+.more {
+  display: block;
+  margin: 8px auto;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.more:hover {
+  border-color: var(--muted);
 }
 
 /* ---- sidebar ---- */
