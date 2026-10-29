@@ -324,6 +324,7 @@ export function DiffView() {
               item={item}
               top={() => topOf(item.l.path) + HEADER_H + metrics(item.l).rows.offset(item.i)}
               height={() => metrics(item.l).rows.height(item.i)}
+              last={() => item.i === metrics(item.l).rows.length - 1}
               measure={(height, excess) => measureRow(item, height, excess)}
               selected={(i) => selectedLine(item.l, i)}
               pick={(side, line, extend) => pickLine(item.l, side, line, extend)}
@@ -417,6 +418,8 @@ function RowView(p: {
   item: RowItem;
   top: () => number;
   height: () => number;
+  /** The file's final row, which rounds its bottom corners to fit the file's border. */
+  last: () => boolean;
   measure: (height: number, overflow: number) => void;
   selected: (i: number) => boolean;
   pick: (side: 'old' | 'new', line: number, extend: boolean) => void;
@@ -447,25 +450,25 @@ function RowView(p: {
   if (split.left !== undefined && split.right !== undefined) {
     const left = split.left;
     const right = split.right;
-    if (left >= 0 && l.diff!.rows[left][0] === HUNK) return <div ref={element} class="row hunk split-hunk" style={style()}><span class="code-clip"><span class="code">{l.diff!.rows[left][3]}</span></span></div>;
+    if (left >= 0 && l.diff!.rows[left][0] === HUNK) return <div ref={element} class="row hunk split-hunk" classList={{ last: p.last() }} style={style()}><span class="code-clip"><span class="code">{l.diff!.rows[left][3]}</span></span></div>;
     const cell = (idx: number, side: 'old' | 'new') => {
       if (idx < 0) return <div class="split-cell empty" />;
       const [kind, oldNo, newNo, text, inline] = l.diff!.rows[idx];
       const n = side === 'old' ? oldNo : newNo;
       return <div class="split-cell" classList={{ add: kind === ADD, del: kind === DEL, selected: p.selected(idx) }}><button class="ln" data-n={n} aria-label={`Select ${side} line ${n}`} onClick={(e) => p.pick(side, n, e.shiftKey)} /><span class="code-clip"><span class="code" innerHTML={codeHtml(text, l.tokens()?.[idx], inline)} /></span></div>;
     };
-    return <div ref={element} class="row split-row" style={style()}>{cell(left, 'old')}{cell(right, 'new')}</div>;
+    return <div ref={element} class="row split-row" classList={{ last: p.last() }} style={style()}>{cell(left, 'old')}{cell(right, 'new')}</div>;
   }
   const [kind, oldNo, newNo, text, inline] = l.diff!.rows[i];
   if (kind === HUNK) {
     return (
-      <div ref={element} class={ROW_CLASS[kind]} style={style()}>
+      <div ref={element} class={ROW_CLASS[kind]} classList={{ last: p.last() }} style={style()}>
         <span class="code-clip"><span class="code">{text}</span></span>
       </div>
     );
   }
   return (
-    <div ref={element} class={ROW_CLASS[kind]} classList={{ selected: p.selected(i) }} style={style()}>
+    <div ref={element} class={ROW_CLASS[kind]} classList={{ selected: p.selected(i), last: p.last() }} style={style()}>
       <Show when={kind !== ADD && oldNo > 0} fallback={<span class="ln" />}><button class="ln" data-n={oldNo} aria-label={`Select old line ${oldNo}`} onClick={(e) => p.pick('old', oldNo, e.shiftKey)} /></Show>
       <Show when={kind !== DEL && newNo > 0} fallback={<span class="ln" />}><button class="ln" data-n={newNo} aria-label={`Select new line ${newNo}`} onClick={(e) => p.pick('new', newNo, e.shiftKey)} /></Show>
       <span class="code-clip"><span class="code" innerHTML={codeHtml(text, l.tokens()?.[i], inline)} /></span>

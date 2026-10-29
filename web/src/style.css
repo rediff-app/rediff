@@ -168,8 +168,8 @@ progress::-moz-progress-bar { background: var(--plus); }
 .code-measure { position: absolute; width: max-content; visibility: hidden; pointer-events: none; font: 12px var(--mono); }
 .canvas { position: relative; }
 .file { position: absolute; left: 16px; right: 16px; border: 1px solid var(--border); border-radius: 6px; }
-.file-header { display: flex; align-items: center; gap: 8px; height: 47px; padding: 0 12px; border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; background: var(--panel); }
-.file-header.collapsed { border-bottom: none; border-radius: 6px; }
+.file-header { display: flex; align-items: center; gap: 8px; height: 47px; padding: 0 12px; border-bottom: 1px solid var(--border); border-radius: 5px 5px 0 0; background: var(--panel); }
+.file-header.collapsed { border-bottom: none; border-radius: 5px; }
 .file-toggle { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; align-self: stretch; padding: 0; border: 0; background: transparent; text-align: left; }
 .file-toggle:hover .path { color: var(--accent); }
 .file-header .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12px var(--mono); }
@@ -181,7 +181,7 @@ progress::-moz-progress-bar { background: var(--plus); }
 .copy-feedback { position: absolute; top: 30px; right: 0; z-index: 5; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); box-shadow: var(--shadow); color: var(--fg); font-size: 11px; }
 .file-message { height: 22px; padding: 0 12px; color: var(--muted); font-size: 12px; line-height: 22px; }
 .sticky { position: absolute; top: 0; left: 16px; right: 16px; z-index: 2; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 3px 6px #1f23280d; }
-.sticky .file-header { border-radius: 0; border-bottom: none; }
+.sticky .file-header { border-radius: 0 0 5px 5px; border-bottom: none; }
 .row { position: absolute; left: 17px; display: flex; width: calc(100% - 34px); min-width: 0; min-height: 22px; font: 12px/22px var(--mono); white-space: pre; contain: layout style; tab-size: 4; background: var(--bg); }
 .ln { flex: none; display: flex; align-items: flex-start; justify-content: flex-end; width: calc(var(--digits) + 2ch); padding: 0 1ch 0 0; border: none; border-radius: 0; background: transparent; color: var(--muted); text-align: right; font: inherit; user-select: none; }
 button.ln:hover { color: var(--fg); text-decoration: underline; }
@@ -202,6 +202,8 @@ button.ln:hover { color: var(--fg); text-decoration: underline; }
 .row.selected .ln, .split-cell.selected .ln { background: var(--selected); color: var(--fg); }
 .row:not(.hunk):hover > .ln { color: var(--fg); }
 .split-row, .split-hunk { width: calc(100% - 34px); }
+/* Rows sit inside .file's border; the last one follows its inner corner radius (6px - 1px border). */
+.row.last { border-radius: 0 0 5px 5px; overflow: hidden; }
 .split-cell { display: flex; flex: 1; min-width: 0; overflow: hidden; }
 .split-cell + .split-cell { border-left: 1px solid var(--border); }
 .split-cell.empty { background: repeating-linear-gradient(-45deg, var(--panel), var(--panel) 3px, var(--subtle-border) 3px, var(--subtle-border) 4px); }
