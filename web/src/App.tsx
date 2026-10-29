@@ -78,11 +78,6 @@ export function App() {
           <span class="connection" title={live() ? 'Connected to the change stream' : 'Reconnecting to the server'}>
             <span class="live" classList={{ on: live() }} /> <span>{live() ? 'Live' : 'Reconnecting'}</span>
           </span>
-          <Show when={commits().length > 0}>
-            <button class="button history-button" classList={{ active: showCommits() }} aria-label="Toggle commit history" aria-pressed={showCommits()} onClick={toggleCommits} title="Toggle commit history">
-              <Icon name="history" /><span>History</span>
-            </button>
-          </Show>
           <button class="icon-button" aria-label="Refresh changes" title="Refresh changes" disabled={refreshing()} onClick={reload}>
             <Icon name="refresh" class={refreshing() ? 'spin' : ''} />
           </button>
@@ -104,9 +99,11 @@ export function App() {
 
       <Show when={status() !== 'unauthorized'} fallback={<div class="notice"><img src={logo} alt="" width="40" height="40" /><h2>Open your authenticated link</h2><p>Open the URL printed by <code>rediff</code> in your terminal to view this comparison.</p></div>}>
         <div class="main">
-          <Show when={showCommits() && commits().length > 0}><CommitList onClose={() => setShowCommits(false)} /></Show>
           <section class="workspace" aria-label="Changes">
             <div class="diff-toolbar">
+              <Show when={commits().length > 0}>
+                <button class="icon-button" classList={{ active: showCommits() }} aria-label="Toggle commit history" aria-pressed={showCommits()} title="Toggle commit history" onClick={toggleCommits}><Icon name="history" /></button>
+              </Show>
               <button class="icon-button" classList={{ active: showFiles() }} aria-label="Toggle file tree" aria-pressed={showFiles()} title="Toggle file tree" onClick={toggleFiles}><Icon name="sidebar" /></button>
               <span class="toolbar-label">{visibleFiles().length === files().length ? 'All changes' : `${visibleFiles().length} of ${files().length} files`}</span>
               <div class="toolbar-actions">
@@ -123,6 +120,7 @@ export function App() {
               </div>
             </div>
             <div class="workspace-body">
+              <Show when={showCommits() && commits().length > 0}><CommitList onClose={() => setShowCommits(false)} /></Show>
               <Show when={showFiles()}><Sidebar onClose={() => setShowFiles(false)} onNavigate={() => { if (window.innerWidth <= 900) setShowFiles(false); }} /></Show>
               <Switch>
                 <Match when={status() === 'loading'}><div class="notice" role="status"><span class="loader" /><h2>Loading changes…</h2><p>Preparing your comparison.</p></div></Match>

@@ -144,7 +144,7 @@ progress::-moz-progress-bar { background: var(--plus); }
 .sidebar-footer { display: flex; justify-content: space-between; align-items: center; flex: none; padding: 10px 12px; border-top: 1px solid var(--subtle-border); color: var(--muted); font-size: 11px; }
 .sidebar-footer kbd { font-size: 10px; }
 .commits { flex: none; width: 264px; overflow: auto; border-right: 1px solid var(--border); background: var(--bg); }
-.commits .panel-heading { position: sticky; top: 0; z-index: 1; height: 52px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.commits .panel-heading { position: sticky; top: 0; z-index: 1; border-bottom: 1px solid var(--border); background: var(--bg); }
 .commit { display: flex; flex-direction: column; justify-content: center; gap: 3px; width: calc(100% - 16px); height: 62px; margin: 4px 8px; padding: 8px; border: none; border-radius: 6px; background: transparent; text-align: left; content-visibility: auto; contain-intrinsic-size: auto 62px; }
 .commit:hover { background: var(--panel); }
 .commit.current { background: var(--current); }
@@ -253,8 +253,7 @@ button.ln:hover { color: var(--fg); text-decoration: underline; }
   .brand-mark { width: 28px; height: 28px; }
   .title { font-size: 11px; }
   .topbar-actions { gap: 2px; }
-  .history-button { width: 30px; padding: 0; border-color: transparent; }
-  .history-button span, .shortcut-button, .connection, .breadcrumb-separator { display: none; }
+  .shortcut-button, .connection, .breadcrumb-separator { display: none; }
   .reviewbar { height: 50px; gap: 12px; padding: 0 12px; }
   .changes-tab h1 { font-size: 12px; }
   .changes-tab { gap: 6px; }
