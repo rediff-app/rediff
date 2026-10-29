@@ -16,5 +16,7 @@ export default defineConfig({
   worker: { format: 'es' },
   server: {
     proxy: { '/api': backend, '/auth': backend },
+    // The logo lives in the repo-level assets/ directory.
+    fs: { allow: ['..'] },
   },
 });

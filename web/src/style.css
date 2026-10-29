@@ -79,7 +79,7 @@ kbd { padding: 0 4px; border: 1px solid var(--border); border-radius: 4px; color
 
 .topbar { display: flex; align-items: center; flex: none; gap: 16px; height: 60px; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--panel); }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 650; letter-spacing: -.5px; }
-.brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.brand-mark { width: 32px; height: 32px; }
 .breadcrumb-separator { color: var(--border); font-size: 22px; font-weight: 300; }
 .title { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--mono); }
 .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
@@ -215,7 +215,7 @@ button.ln:hover { color: var(--fg); text-decoration: underline; }
 
 /* Empty, loading, and help states */
 .notice { align-self: flex-start; margin: 90px auto; max-width: 480px; padding: 0 24px; color: var(--muted); text-align: center; }
-.notice > svg { margin-bottom: 12px; }
+.notice > svg, .notice > img { margin-bottom: 12px; }
 .notice h2 { margin-bottom: 8px; color: var(--fg); font-size: 18px; font-weight: 600; }
 .notice p { line-height: 1.7; overflow-wrap: anywhere; }
 .notice .button { margin-top: 20px; }

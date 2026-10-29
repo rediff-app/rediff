@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
+import logo from '../../assets/logo.svg';
 import { subscribe } from './api';
 import { CommitList } from './Commits';
 import { DiffView } from './DiffView';
@@ -70,7 +71,7 @@ export function App() {
   return (
     <div class="app">
       <header class="topbar">
-        <span class="brand"><span class="brand-mark"><Icon name="diff" size={20} /></span>rediff</span>
+        <span class="brand"><img class="brand-mark" src={logo} alt="" />rediff</span>
         <span class="breadcrumb-separator">/</span>
         <span class="title" title={title()}>{title() || 'Loading comparison…'}</span>
         <div class="topbar-actions">
@@ -101,7 +102,7 @@ export function App() {
         </div>
       </div>
 
-      <Show when={status() !== 'unauthorized'} fallback={<div class="notice"><Icon name="diff" size={32} /><h2>Open your authenticated link</h2><p>Open the URL printed by <code>rediff</code> in your terminal to view this comparison.</p></div>}>
+      <Show when={status() !== 'unauthorized'} fallback={<div class="notice"><img src={logo} alt="" width="40" height="40" /><h2>Open your authenticated link</h2><p>Open the URL printed by <code>rediff</code> in your terminal to view this comparison.</p></div>}>
         <div class="main">
           <Show when={showCommits() && commits().length > 0}><CommitList onClose={() => setShowCommits(false)} /></Show>
           <section class="workspace" aria-label="Changes">

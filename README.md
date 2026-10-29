@@ -1,6 +1,12 @@
-# rediff
+<p align="center">
+  <img src="assets/logo.svg" width="96" alt="rediff logo">
+</p>
 
-English | [简体中文](README.zh-CN.md)
+<h1 align="center">rediff</h1>
+
+<p align="center"><strong>A redesigned way to review diffs.</strong></p>
+
+<p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
 A command-line tool for viewing git diffs in the browser. It ships as a single Rust binary with the frontend embedded, and opens your browser on startup.
 

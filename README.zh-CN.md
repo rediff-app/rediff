@@ -1,6 +1,12 @@
-# rediff
+<p align="center">
+  <img src="assets/logo.svg" width="96" alt="rediff logo">
+</p>
 
-[English](README.md) | 简体中文
+<h1 align="center">rediff</h1>
+
+<p align="center"><strong>重新设计的 diff 审阅方式。</strong></p>
+
+<p align="center"><a href="README.md">English</a> | 简体中文</p>
 
 在浏览器里查看 git diff 的命令行工具。单个 Rust 二进制，前端资源编译进二进制里，启动后自动打开浏览器。
 
