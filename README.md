@@ -19,7 +19,12 @@ rediff HEAD~3..HEAD -- src  # a commit range, limited to a path
 rediff --help               # all options: -U, --algorithm, --host, --port, --no-open, --no-watch ...
 ```
 
-The page follows GitHub's Files changed layout: a filterable file tree on the left, and per-file diffs on the right. The History button in the top bar opens the commit list for the current branch (100 commits at a time, with more on demand). Click a commit to see its changes (against its first parent; a root commit is compared against the empty tree); the top entry returns to the diff given on the command line. When paths are given, the list only shows commits that touched those paths.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
+  <img src="assets/screenshot-light.png" alt="rediff showing a commit's changes, with the commit history and the changed files tree open">
+</picture>
+
+The page follows GitHub's Files changed layout: a filterable file tree on the left, and per-file diffs on the right. The history button at the left of the toolbar opens the commit list for the current branch (100 commits at a time, with more on demand). Click a commit to see its changes (against its first parent; a root commit is compared against the empty tree); the top entry returns to the diff given on the command line. When paths are given, the list only shows commits that touched those paths.
 
 - **Diff view**: Unified / Split toggles between a unified and a side-by-side diff, and remembers your choice. Wrap is on by default: long lines wrap to the width of the code area, and both sides of the split view stay aligned. With Wrap off, use the horizontal scrollbar at the bottom, a trackpad swipe, or Shift + wheel to see the full code (both sides scroll together), while file headers and line numbers stay fixed. The wrap preference is saved.
 - **File navigation**: filter by path (also matches the pre-rename path); the toolbar has previous / next file and collapse / expand all. On narrow screens the file tree and commit list open as floating panels.

@@ -19,7 +19,12 @@ rediff HEAD~3..HEAD -- src  # 提交区间，限定路径
 rediff --help               # 全部选项：-U、--algorithm、--host、--port、--no-open、--no-watch ...
 ```
 
-页面参考 GitHub 的 Files changed 布局：左侧是可筛选的文件树，右侧按文件显示 diff。顶栏的 History 按钮打开当前分支的提交列表（每次加载 100 个，可继续加载更多）。点一个提交查看它的改动（相对第一个父提交，根提交相对空树）；最上面一项回到命令行指定的 diff。给了路径参数时，列表只显示改过这些路径的提交。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
+  <img src="assets/screenshot-light.png" alt="rediff 界面：打开了提交历史和文件树，正在查看一个提交的改动">
+</picture>
+
+页面参考 GitHub 的 Files changed 布局：左侧是可筛选的文件树，右侧按文件显示 diff。工具栏左侧的历史按钮打开当前分支的提交列表（每次加载 100 个，可继续加载更多）。点一个提交查看它的改动（相对第一个父提交，根提交相对空树）；最上面一项回到命令行指定的 diff。给了路径参数时，列表只显示改过这些路径的提交。
 
 - **对比视图**：Unified / Split 切换统一或双栏 diff，记住上次选择。默认开启 Wrap，长行按代码区宽度自动换行，双栏两侧仍保持行对齐。关闭 Wrap 后，使用底部横向滚动条、触控板横滑或 Shift + 滚轮查看完整代码（双栏同步滚动），文件标题和行号固定；换行偏好会保存。
 - **文件导航**：按路径筛选（也匹配重命名前的路径），工具栏支持上一个 / 下一个文件、全部折叠 / 展开；窄屏下文件树和提交列表以浮动面板打开。
