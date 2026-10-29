@@ -1,92 +1,110 @@
 # rediff
 
-在浏览器里查看 git diff 的命令行工具。单个 Rust 二进制，前端资源编译进二进制里，启动后自动打开浏览器。
+English | [简体中文](README.zh-CN.md)
+
+A command-line tool for viewing git diffs in the browser. It ships as a single Rust binary with the frontend embedded, and opens your browser on startup.
 
 ```sh
-rediff                      # 工作区 vs HEAD（包含未跟踪文件）
-rediff --cached             # 暂存区 vs HEAD
-rediff main                 # 工作区 vs main
+rediff                      # working tree vs HEAD (including untracked files)
+rediff --cached             # index vs HEAD
+rediff main                 # working tree vs main
 rediff main feature         # main vs feature
-rediff HEAD~3..HEAD -- src  # 提交区间，限定路径
-rediff --help               # 全部选项：-U、--algorithm、--host、--port、--no-open、--no-watch ...
+rediff HEAD~3..HEAD -- src  # a commit range, limited to a path
+rediff --help               # all options: -U, --algorithm, --host, --port, --no-open, --no-watch ...
 ```
 
-页面参考 GitHub 的 Files changed 布局：左侧是可筛选的文件树，右侧按文件显示 diff。顶栏的 History 按钮打开当前分支的提交列表（每次加载 100 个，可继续加载更多）。点一个提交查看它的改动（相对第一个父提交，根提交相对空树）；最上面一项回到命令行指定的 diff。给了路径参数时，列表只显示改过这些路径的提交。
+The page follows GitHub's Files changed layout: a filterable file tree on the left, and per-file diffs on the right. The History button in the top bar opens the commit list for the current branch (100 commits at a time, with more on demand). Click a commit to see its changes (against its first parent; a root commit is compared against the empty tree); the top entry returns to the diff given on the command line. When paths are given, the list only shows commits that touched those paths.
 
-- **对比视图**：Unified / Split 切换统一或双栏 diff，记住上次选择。默认开启 Wrap，长行按代码区宽度自动换行，双栏两侧仍保持行对齐。关闭 Wrap 后，使用底部横向滚动条、触控板横滑或 Shift + 滚轮查看完整代码（双栏同步滚动），文件标题和行号固定；换行偏好会保存。
-- **文件导航**：按路径筛选（也匹配重命名前的路径），工具栏支持上一个 / 下一个文件、全部折叠 / 展开；窄屏下文件树和提交列表以浮动面板打开。
-- **审阅进度**：勾选 Viewed 自动折叠文件，Hide viewed files 隐藏已读文件。标记按比较对象和文件版本记录在当前页面会话中，文件内容变化后自动取消，刷新页面会清空。
-- **行与路径**：点击行号高亮一行，Shift + 点击选择同行侧的连续范围；文件标题旁可复制完整路径。
-- **快捷键**：`j` / `k` 切换文件，`/` 筛选，`v` 标记已读，`c` 折叠 / 展开，`?` 查看帮助。输入框内不会触发导航快捷键。
+- **Diff view**: Unified / Split toggles between a unified and a side-by-side diff, and remembers your choice. Wrap is on by default: long lines wrap to the width of the code area, and both sides of the split view stay aligned. With Wrap off, use the horizontal scrollbar at the bottom, a trackpad swipe, or Shift + wheel to see the full code (both sides scroll together), while file headers and line numbers stay fixed. The wrap preference is saved.
+- **File navigation**: filter by path (also matches the pre-rename path); the toolbar has previous / next file and collapse / expand all. On narrow screens the file tree and commit list open as floating panels.
+- **Review progress**: checking Viewed collapses a file, and Hide viewed files hides the ones you've read. Marks are kept per comparison and file version for the current page session: they clear automatically when a file's content changes, and are lost on reload.
+- **Lines and paths**: click a line number to highlight a line, Shift + click to select a range on the same side; copy a file's full path from next to its header.
+- **Keyboard shortcuts**: `j` / `k` to move between files, `/` to filter, `v` to mark as viewed, `c` to collapse / expand, `?` for help. Navigation shortcuts don't fire while typing in an input.
 
-启动后会打印两个地址：本机地址（`local`）和局域网地址（`network`，取默认路由所在网卡的 IP），在远程开发机上运行时可以直接在自己电脑的浏览器里打开 `network` 那个。URL 里带一次性 token，没有它无法读取 API。只想本机访问时加 `--host 127.0.0.1`。
+On startup it prints two addresses: a local one (`local`) and a LAN one (`network`, the IP of the interface on the default route). When running on a remote dev machine, you can open the `network` address directly in the browser on your own computer. The URL carries a one-time token; the API can't be read without it. Add `--host 127.0.0.1` for local-only access.
 
-注意局域网访问走的是明文 HTTP：同一网络里能抓包的人可以看到 token 和 diff 内容，在不信任的网络里请用 `--host 127.0.0.1` 加 SSH 端口转发。
+Note that LAN access is plain HTTP: anyone on the same network who can sniff traffic can see the token and the diff contents. On untrusted networks, use `--host 127.0.0.1` with SSH port forwarding.
 
-## 构建
+## Install
 
-依赖：Rust（stable）、Node.js 20+、git。
+macOS / Linux:
 
 ```sh
-make build        # 构建前端 + release 二进制 -> target/release/rediff
-make install      # 安装到 ~/.cargo/bin
-make test         # Rust 单测 + 前端类型检查与布局单测
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rediff-app/rediff/releases/latest/download/rediff-installer.sh | sh
 ```
 
-## 开发
+Windows (PowerShell):
 
-两种方式：
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/rediff-app/rediff/releases/latest/download/rediff-installer.ps1 | iex"
+```
 
-1. **前端改动频繁**：`make dev-web`（vite build --watch）+ `cargo run -- <参数>`。debug 构建运行时直接从磁盘读 `web/dist`，前端改完刷新页面即可，不需要重新编译 Rust。
-2. **需要 HMR**：`cargo run -- --port 7777 --no-open` + `cd web && npm run dev`，然后把终端里的 URL 换成 `http://localhost:5173/auth?token=...` 打开。Vite 会把 `/api` 和 `/auth` 代理到 7777 端口。
+This installs to `~/.cargo/bin` along with `rediff-update`; run it later to upgrade to the latest release. You can also download the archive for your platform from the [Releases](https://github.com/rediff-app/rediff/releases) page.
 
-## 结构
+## Build
+
+Requirements: Rust (stable), Node.js 20+, git.
+
+```sh
+make build        # build the frontend + release binary -> target/release/rediff
+make install      # install to ~/.cargo/bin
+make test         # Rust unit tests + frontend type check and layout tests
+```
+
+## Development
+
+Two workflows:
+
+1. **Frequent frontend changes**: `make dev-web` (vite build --watch) + `cargo run -- <args>`. Debug builds read `web/dist` from disk at runtime, so after a frontend change just reload the page; no Rust rebuild needed.
+2. **With HMR**: `cargo run -- --port 7777 --no-open` + `cd web && npm run dev`, then open the URL printed in the terminal with the origin replaced by `http://localhost:5173` (i.e. `http://localhost:5173/auth?token=...`). Vite proxies `/api` and `/auth` to port 7777.
+
+## Layout
 
 ```
 src/
-  main.rs     命令行参数、启动服务器、打开浏览器
-  git.rs      调用 git 命令：文件列表（--raw --numstat -z）、单文件 patch、未跟踪文件、提交列表
-  patch.rs    把 patch 解析成紧凑的行数组 + 行内（词级）diff
-  server.rs   axum 路由、token 鉴权、diff 缓存、各提交的文件列表缓存、SSE 推送
-  watch.rs    监听工作区 / index / refs，变化后推给前端
-  assets.rs   rust-embed 内嵌的前端资源
+  main.rs     CLI arguments, starting the server, opening the browser
+  git.rs      git commands: file list (--raw --numstat -z), per-file patch, untracked files, commit list
+  patch.rs    parses a patch into a compact line array + inline (word-level) diff
+  server.rs   axum routes, token auth, diff cache, per-commit file list cache, SSE push
+  watch.rs    watches the working tree / index / refs and pushes changes to the frontend
+  assets.rs   frontend assets embedded with rust-embed
 web/src/
-  store.ts          文件列表、按需加载 diff 的队列、折叠状态、当前选中的提交
-  Commits.tsx       提交列表（最左侧一栏）
-  Sidebar.tsx       目录树侧边栏（单子目录链压缩显示，目录可折叠）
-  tree.ts           树的排序与构建：每层目录在前、自然排序；diff 区用同一顺序
-  DiffView.tsx      两级虚拟滚动（文件 + 行）
-  diffRows.ts       双栏行对齐与横向滚动宽度估计
-  rowLayout.ts      可变行高索引，支持换行后的虚拟滚动
-  render.ts         语法 token 与词级 diff 合并成一行 HTML
-  highlight*.ts     Web Worker 里跑 shiki，语言按需懒加载
+  store.ts          file list, on-demand diff loading queue, collapse state, selected commit
+  Commits.tsx       commit list (leftmost column)
+  Sidebar.tsx       directory tree sidebar (single-child directory chains compacted, collapsible directories)
+  tree.ts           tree sorting and building: directories first at each level, natural sort; the diff area uses the same order
+  DiffView.tsx      two-level virtual scrolling (files + lines)
+  diffRows.ts       side-by-side line alignment and horizontal scroll width estimation
+  rowLayout.ts      variable row height index, enabling virtual scrolling with wrapped lines
+  render.ts         merges syntax tokens and word-level diff into one line of HTML
+  highlight*.ts     shiki running in a Web Worker, languages lazy-loaded on demand
 ```
 
-## 性能相关的设计
+## Performance design
 
-- **git 层用 git 命令而不是 libgit2**：大仓库上 status/diff 更快（fsmonitor、untracked cache），`.gitattributes`、重命名检测等行为和 git 一致。设置了 `GIT_OPTIONAL_LOCKS=0`，后台运行时不会改写 index。
-- **diff 算法默认跟随仓库的 `diff.algorithm`**（没配置就用 myers），和 `git diff` 显示的一致。不强制用 histogram，因为老版本 git 的 histogram 在某些输入上会严重退化：git 2.20 上一个 20 万行、隔行修改的文件，myers 只要 0.14 秒，histogram 30 秒都跑不完。单文件 diff 设了 60 秒超时作为兜底。
-- **按需加载**：首屏只请求文件列表；滚动到哪个文件才请求哪个文件的 diff，同时最多 4 个请求，优先加载可见区域。超大文件、lockfile 默认折叠。
-- **内容寻址缓存**：每个文件有一个 `version`（两侧都是 git 对象时就是 oid 对，工作区文件用 mtime+size）。服务端按 `path + version` 做 LRU 缓存（上限 128 MB）；两侧都是对象时响应带 `Cache-Control: immutable`，工作区文件用 ETag 返回 304。
-- **紧凑的数据格式**：每行是 `[kind, old, new, text, inline?]` 数组而不是对象，再做 gzip/br/zstd 压缩（只用快速档位）。
-- **前端只渲染可见的行**：DOM 节点按行对象复用；换行后的高度先估计，再根据可见代码的实际高度校正，通过可变行高索引定位视口，单行高度更新和定位都是 O(log n)。切换换行、视图或调整窗口宽度时按代码行锚定位置；大量行的 diff 也只渲染视口附近的行。
-- **语法高亮不占主线程**：shiki 用 JS 正则引擎（不需要 wasm），在 Worker 里按文件整段高亮，结果以 class 形式输出，合并后用一次 innerHTML 写入。
-- **实时刷新**：Linux 上只对没被 ignore 的目录逐个加 inotify watch（避免 `node_modules`、`target` 耗尽 watch 配额），事件去抖后通过 SSE 推送；前端只重新拉取 version 变了的文件。
+- **git commands instead of libgit2**: status/diff are faster on large repos (fsmonitor, untracked cache), and `.gitattributes`, rename detection, etc. behave exactly like git. `GIT_OPTIONAL_LOCKS=0` is set so running in the background never rewrites the index.
+- **The diff algorithm follows the repo's `diff.algorithm` by default** (myers if unset), matching what `git diff` shows. Histogram isn't forced because older git versions' histogram degrades badly on some inputs: on git 2.20, a 200k-line file with every other line changed takes 0.14 s with myers, while histogram doesn't finish in 30 s. Each per-file diff has a 60 s timeout as a fallback.
+- **On-demand loading**: the first screen only requests the file list; a file's diff is requested when it scrolls into view, with at most 4 requests in flight and the visible area prioritized. Very large files and lockfiles are collapsed by default.
+- **Content-addressed caching**: each file has a `version` (the oid pair when both sides are git objects, mtime+size for working tree files). The server keeps an LRU cache keyed by `path + version` (capped at 128 MB); when both sides are objects the response carries `Cache-Control: immutable`, and working tree files get an ETag and 304s.
+- **Compact data format**: each line is a `[kind, old, new, text, inline?]` array rather than an object, then compressed with gzip/br/zstd (fast levels only).
+- **The frontend only renders visible lines**: DOM nodes are reused per row object. Wrapped line heights are estimated first, then corrected from the measured height of the visible code; a variable row height index locates the viewport, so both single-row height updates and lookups are O(log n). Toggling wrap, switching views, or resizing the window anchors the position to a code line; diffs with huge numbers of lines still render only the rows near the viewport.
+- **Syntax highlighting stays off the main thread**: shiki uses its JS regex engine (no wasm) and highlights whole files in a Worker; results are emitted as classes, merged, and written with a single innerHTML.
+- **Live refresh**: on Linux, inotify watches are added only for directories that aren't ignored (so `node_modules` and `target` don't exhaust the watch quota). Events are debounced and pushed over SSE; the frontend refetches only files whose version changed.
 
-## 实测（505 个文件，其中一个文件改了 20 万行）
+## Benchmarks (505 files, one of them with 200k changed lines)
 
-| 项目 | 结果 |
+| Item | Result |
 |---|---|
-| 文件列表 `/api/files`（命中缓存） | < 1 ms |
-| 20 万行改动的文件（30 万行，9.1 MB JSON），首次请求 | 288 ms |
-| 同一文件再次请求（服务端缓存） | 2.7 ms |
-| 同一文件 zstd 压缩后 | 417 KB，28 ms |
-| 打开页面到首批行出现（headless Chromium） | ≈ 130 ms |
-| 在这个文件里每帧滚动 1500px，共 200 次 | 每帧中位数 16.5 ms（被 60Hz 刷新率卡住），DOM 最多 123 行 |
-| 改文件到页面显示新内容 | ≈ 330 ms |
+| File list `/api/files` (cache hit) | < 1 ms |
+| The file with 200k changed lines (300k lines, 9.1 MB JSON), first request | 288 ms |
+| Same file again (server cache) | 2.7 ms |
+| Same file, zstd-compressed | 417 KB, 28 ms |
+| Page open to first rows shown (headless Chromium) | ≈ 130 ms |
+| Scrolling 1500px per frame in that file, 200 times | median 16.5 ms per frame (capped by the 60Hz refresh rate), at most 123 rows in the DOM |
+| File change to new content on the page | ≈ 330 ms |
 
-## 已知限制
+## Known limitations
 
-- 浏览器对元素高度有上限（Chrome 约 3300 万 px），所有展开文件加起来超过约 150 万个显示行时，最后面的内容无法滚动到；自动换行会增加显示行数。
-- 行是虚拟渲染的，跨越很多屏的文本选区会在滚动后丢失。
-- 语法高亮按 hunk 拼接后整体分词，hunk 恰好从多行注释或字符串中间开始时，开头几行的颜色可能不对。
+- Browsers cap element height (about 33 million px in Chrome). Once all expanded files together exceed roughly 1.5 million display lines, the content at the end can't be scrolled to; wrapping increases the number of display lines.
+- Lines are virtually rendered, so a text selection spanning many screens is lost after scrolling.
+- Syntax highlighting tokenizes the concatenated hunks as a whole, so when a hunk starts in the middle of a multi-line comment or string, the first few lines may be colored incorrectly.
