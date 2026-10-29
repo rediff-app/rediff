@@ -8,7 +8,17 @@
 
 <p align="center"><a href="README.md">English</a> | 简体中文</p>
 
-在浏览器里查看 git diff 的命令行工具。单个 Rust 二进制，前端资源编译进二进制里，启动后自动打开浏览器。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
+  <img src="assets/screenshot-light.png" alt="rediff 审阅页面：左侧是改动文件树，右侧是双栏 diff">
+</picture>
+
+rediff 把任意 git diff 打开成浏览器里 GitHub 风格的审阅页面：不用先推送，不用开 PR，在本机和远程开发机上都能用。
+
+- **大 diff 也快**：在 505 个文件、其中一个文件改了 20 万行的对比上，打开页面约 130 ms 就出现首批行；那个大文件首次加载 288 ms（命中缓存 2.7 ms），滚动保持满帧。diff 随滚动按需加载，只渲染屏幕上的行，语法高亮在 Web Worker 里进行。保存文件后约 330 ms 页面就显示出改动。详见[性能相关的设计](#性能相关的设计)和[实测](#实测505-个文件其中一个文件改了-20-万行)。
+- **只有一个二进制，无需安装其他东西**：服务器、网页界面和 39 种语言的语法高亮都编译进一个 `rediff` 可执行文件，大小 6–8 MB，按平台不同下载包为 1.4–2.1 MB。除了 git 什么都不依赖：不用 Node.js、不用运行时、不用配置。拷到远程开发机上就能运行。
+
+在仓库里运行即可：它会启动本地服务器、打印访问地址，有浏览器时自动打开。
 
 ```sh
 rediff                      # 工作区 vs HEAD（包含未跟踪文件）
@@ -18,11 +28,6 @@ rediff main feature         # main vs feature
 rediff HEAD~3..HEAD -- src  # 提交区间，限定路径
 rediff --help               # 全部选项：-U、--algorithm、--host、--port、--no-open、--no-watch ...
 ```
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
-  <img src="assets/screenshot-light.png" alt="rediff 界面：打开了提交历史和文件树，正在查看一个提交的改动">
-</picture>
 
 页面参考 GitHub 的 Files changed 布局：左侧是可筛选的文件树，右侧按文件显示 diff。工具栏左侧的历史按钮打开当前分支的提交列表（每次加载 100 个，可继续加载更多）。点一个提交查看它的改动（相对第一个父提交，根提交相对空树）；最上面一项回到命令行指定的 diff。给了路径参数时，列表只显示改过这些路径的提交。
 
@@ -50,7 +55,7 @@ Windows（PowerShell）：
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/rediff-app/rediff/releases/latest/download/rediff-installer.ps1 | iex"
 ```
 
-安装到 `~/.cargo/bin`，同时装上 `rediff-update`，之后运行它即可升级到最新版本。也可以从 [Releases](https://github.com/rediff-app/rediff/releases) 页面直接下载对应平台的压缩包。
+安装到 `~/.cargo/bin`，同时装上 `rediff-update`，之后运行它即可升级到最新版本。也可以从 [Releases](https://github.com/rediff-app/rediff/releases) 页面直接下载对应平台的压缩包：1.4–2.1 MB，里面只有 `rediff` 二进制和 README，把二进制放到 `PATH` 里任意目录即可。
 
 ## 构建
 

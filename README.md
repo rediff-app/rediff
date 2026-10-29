@@ -8,7 +8,17 @@
 
 <p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
-A command-line tool for viewing git diffs in the browser. It ships as a single Rust binary with the frontend embedded, and opens your browser on startup.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
+  <img src="assets/screenshot-light.png" alt="The rediff review page showing a split diff, with the changed files tree on the left">
+</picture>
+
+rediff opens any git diff in a GitHub-style review page in your browser: before you push, without a pull request, on your laptop or on a remote dev box.
+
+- **Fast, even on huge diffs**: on a comparison of 505 files, one of them with 200,000 changed lines, the first lines appear about 130 ms after the page opens, and the big file loads in 288 ms (2.7 ms once cached) and scrolls at full frame rate. Diffs load as you scroll to them, only the lines on screen are rendered, and syntax highlighting runs in a Web Worker. Save a file and the page shows the change about 330 ms later. See [Performance design](#performance-design) and [Benchmarks](#benchmarks-505-files-one-of-them-with-200k-changed-lines).
+- **One binary, nothing else to install**: the server, the web UI and syntax highlighting for 39 languages are compiled into a single `rediff` executable of 6–8 MB, a 1.4–2.1 MB download depending on the platform. All it needs is git: no Node.js, no runtime, no config. Copy it onto a remote dev box and run it.
+
+Run it in a repository: it starts a local server, prints its address and opens your browser if there is one.
 
 ```sh
 rediff                      # working tree vs HEAD (including untracked files)
@@ -18,11 +28,6 @@ rediff main feature         # main vs feature
 rediff HEAD~3..HEAD -- src  # a commit range, limited to a path
 rediff --help               # all options: -U, --algorithm, --host, --port, --no-open, --no-watch ...
 ```
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
-  <img src="assets/screenshot-light.png" alt="rediff showing a commit's changes, with the commit history and the changed files tree open">
-</picture>
 
 The page follows GitHub's Files changed layout: a filterable file tree on the left, and per-file diffs on the right. The history button at the left of the toolbar opens the commit list for the current branch (100 commits at a time, with more on demand). Click a commit to see its changes (against its first parent; a root commit is compared against the empty tree); the top entry returns to the diff given on the command line. When paths are given, the list only shows commits that touched those paths.
 
@@ -50,7 +55,7 @@ Windows (PowerShell):
 powershell -ExecutionPolicy Bypass -c "irm https://github.com/rediff-app/rediff/releases/latest/download/rediff-installer.ps1 | iex"
 ```
 
-This installs to `~/.cargo/bin` along with `rediff-update`; run it later to upgrade to the latest release. You can also download the archive for your platform from the [Releases](https://github.com/rediff-app/rediff/releases) page.
+This installs to `~/.cargo/bin` along with `rediff-update`; run it later to upgrade to the latest release. You can also download the archive for your platform from the [Releases](https://github.com/rediff-app/rediff/releases) page: 1.4–2.1 MB, holding the `rediff` binary and this README. Put the binary anywhere on your `PATH`.
 
 ## Build
 
