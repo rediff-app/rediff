@@ -3,19 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>rediff — A redesigned way to review diffs</title>
-  <meta name="description" content="rediff opens any git diff in a fast, GitHub-style review page in your browser, before you push and without opening a pull request.">
+  <title>rediff — Fast, GitHub-style git diff viewer in your browser</title>
+  <meta name="description" content="Review any git diff in a fast, GitHub-style browser page before you push, no pull request needed. One binary for macOS, Linux, Windows and remote dev boxes.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <link rel="canonical" href="https://rediff.app/">
+  <link rel="alternate" hreflang="en" href="https://rediff.app/">
+  <link rel="alternate" hreflang="zh-CN" href="https://rediff.app/zh/">
+  <link rel="alternate" hreflang="x-default" href="https://rediff.app/">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="rediff">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:url" content="https://rediff.app/">
-  <meta property="og:title" content="rediff — A redesigned way to review diffs">
-  <meta property="og:description" content="Review any git diff in a fast, GitHub-style page in your browser, before you push.">
+  <meta property="og:title" content="rediff — Fast, GitHub-style git diff viewer in your browser">
+  <meta property="og:description" content="Review any git diff in a fast, GitHub-style browser page before you push, no pull request needed. One binary for macOS, Linux, Windows and remote dev boxes.">
   <meta property="og:image" content="https://rediff.app/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The rediff logo and the tagline: A redesigned way to review diffs.">
   <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "name": "rediff",
+          "alternateName": "rediff.app",
+          "url": "https://rediff.app/"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "rediff",
+          "url": "https://rediff.app/",
+          "description": "Review any git diff in a fast, GitHub-style browser page before you push, no pull request needed. One binary for macOS, Linux, Windows and remote dev boxes.",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "macOS, Linux, Windows",
+          "image": "https://rediff.app/og.png",
+          "downloadUrl": "https://github.com/rediff-app/rediff/releases/latest",
+          "sameAs": "https://github.com/rediff-app/rediff",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        }
+      ]
+    }
+  </script>
+  <script>
+    // Visitors who picked Chinese, or followed an old ?lang=zh link, belong on /zh/.
+    // This runs before first paint and only on the English page's path.
+    (() => {
+      if (location.pathname !== '/') return;
+      const param = new URLSearchParams(location.search).get('lang');
+      let stored = null;
+      try { stored = localStorage.getItem('rediff-lang'); } catch {}
+      if (param === 'zh' || (param !== 'en' && stored === 'zh')) location.replace('/zh/');
+    })();
+  </script>
   <style>
     :root {
       --bg: #ffffff;
@@ -109,8 +156,8 @@
     .nav-links a { color: var(--muted); }
     .nav-links a:hover { color: var(--fg); text-decoration: none; }
     .nav-actions { display: flex; align-items: center; gap: 8px; }
-    .lang { height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-size: 13px; }
-    .lang:hover { background: var(--panel); }
+    .lang { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font-size: 13px; }
+    .lang:hover { background: var(--panel); text-decoration: none; }
     .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--fg); font-size: 15px; font-weight: 600; white-space: nowrap; }
     .btn:hover { background: var(--panel); text-decoration: none; }
     .btn.small { height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; }
@@ -314,6 +361,11 @@
     .install-foot { margin: 14px 2px 0; color: var(--muted); font-size: 14px; }
     @media (max-width: 900px) { .install { grid-template-columns: minmax(0, 1fr); gap: 32px; } }
 
+    .faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 48px; }
+    .faq h3 { margin: 0 0 8px; font-size: 17px; line-height: 1.35; letter-spacing: -.01em; text-wrap: balance; }
+    .faq p { margin: 0; color: var(--muted); font-size: 15px; text-wrap: pretty; }
+    @media (max-width: 760px) { .faq { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+
     .cta { margin-top: 112px; padding: 72px 24px; border-top: 1px solid var(--border); background: var(--panel); text-align: center; }
     .cta img { width: 64px; height: 64px; }
     .cta h2 { margin-top: 20px; }
@@ -340,7 +392,7 @@
         <a href="#install" data-i18n="nav.install">Install</a>
       </div>
       <div class="nav-actions">
-        <button class="lang" id="lang" type="button" lang="zh-CN">中文</button>
+        <a class="lang" id="lang" href="/zh/" hreflang="zh-CN" lang="zh-CN" data-lang="zh">中文</a>
         <a class="btn small" href="https://github.com/rediff-app/rediff">GitHub</a>
       </div>
     </nav>
@@ -609,6 +661,41 @@ make install</code></pre>
       </div>
     </section>
 
+    <section id="faq">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker" data-i18n="faq.kicker">// faq</p>
+          <h2 data-i18n="faq.title">Common questions</h2>
+        </div>
+        <div class="faq">
+          <div>
+            <h3 data-i18n="faq.browser.q">How do I view a git diff in the browser?</h3>
+            <p data-i18n="faq.browser.a">Install rediff and run <code>rediff</code> in a repository. It starts a local server, prints its address and opens your browser. Add a branch or a commit range to compare something else, such as <code>rediff main</code> or <code>rediff HEAD~3..HEAD</code>.</p>
+          </div>
+          <div>
+            <h3 data-i18n="faq.push.q">How do I review my changes before pushing or opening a pull request?</h3>
+            <p data-i18n="faq.push.a">Run <code>rediff</code> to see the working tree against HEAD, untracked files included, or <code>rediff --cached</code> to see only what's staged. Everything is read from your local repository, so nothing has to be pushed first.</p>
+          </div>
+          <div>
+            <h3 data-i18n="faq.remote.q">Can I review a diff on a remote dev box or over SSH?</h3>
+            <p data-i18n="faq.remote.a">Yes. Copy the binary to the remote machine and open the printed <code>network</code> address in your laptop's browser. That address is plain HTTP, so on an untrusted network use <code>--host 127.0.0.1</code> with SSH port forwarding.</p>
+          </div>
+          <div>
+            <h3 data-i18n="faq.large.q">How large a diff can rediff handle?</h3>
+            <p data-i18n="faq.large.a">A file with 200,000 changed lines loads in about 300 ms and scrolls at full frame rate, because files load as you reach them and only visible lines are rendered. The limit is around 1.5 million displayed lines across all expanded files.</p>
+          </div>
+          <div>
+            <h3 data-i18n="faq.needs.q">What do I need to run rediff?</h3>
+            <p data-i18n="faq.needs.a">Only git. The server, web UI and syntax highlighting for 39 languages are compiled into one executable, with no Node.js, runtime or config to set up. It runs on macOS, Linux and Windows.</p>
+          </div>
+          <div>
+            <h3 data-i18n="faq.private.q">Does my code leave my machine?</h3>
+            <p data-i18n="faq.private.a">No. rediff is a local server that reads your repository with git and serves the page itself, with no cloud service or account. Every URL carries a one-time token, and the API can't be read without it.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="cta">
       <img src="/logo.svg" alt="" width="64" height="64">
       <h2 data-i18n="cta.title">Read your next diff in rediff</h2>
@@ -633,105 +720,10 @@ make install</code></pre>
 
   <script>
     (() => {
-      const zh = {
-        'meta.title': 'rediff — 重新设计的 diff 审阅方式',
-        'meta.description': 'rediff 在浏览器里用 GitHub 风格的审阅页面打开任意 git diff，不用 push，也不用开 PR。',
-        'nav.usage': '用法',
-        'nav.features': '功能',
-        'nav.performance': '性能',
-        'nav.install': '安装',
-        'hero.eyebrow': '在浏览器里看，push 之前就能看',
-        'hero.title': '<del>旧的</del> <ins>重新设计的</ins> diff 审阅方式。',
-        'hero.lead': 'rediff 把任意 git diff 打开成一个快速的 GitHub 风格审阅页面。不用开 PR，也不用先 push：一个二进制文件，在笔记本或远程开发机上都能用。',
-        'hero.rust': 'Rust 编写',
-        'hero.fast': '20 万行 diff 秒开',
-        'hero.binary': '单个二进制 6–8 MB',
-        'hero.memory': '空闲内存约 13 MB',
-        'hero.remote': '支持远程开发机',
-        'hero.github': '在 GitHub 上查看 →',
-        'hero.platforms': 'macOS · Linux · Windows',
-        'hero.shot': 'rediff 审阅页面，显示一个双栏 diff',
-        'usage.kicker': '// 用法',
-        'usage.title': '一条命令，任意对比',
-        'usage.lead': '在仓库里运行 <code>rediff</code>，它会启动本地服务器、打印地址，并自动打开浏览器。',
-        'usage.worktree': '工作区 vs HEAD，包含未跟踪文件',
-        'usage.cached': '暂存区 vs HEAD',
-        'usage.branch': '工作区 vs <code>main</code>',
-        'usage.two': '两个分支之间的对比',
-        'usage.range': '提交区间，限定路径',
-        'usage.term': 'rediff main 的终端输出',
-        'features.kicker': '// 功能',
-        'features.title': 'PR 级别的审阅体验，不需要 PR',
-        'features.lead': '在 GitHub 上审阅时依赖的功能，现在直接用在你本机的改动上。',
-        'f.split.t': '双栏或统一视图',
-        'f.split.d': '随时切换布局。长行自动换行，双栏两侧始终保持对齐。',
-        'f.viewed.t': '记录审阅进度',
-        'f.viewed.d': '标记 Viewed 自动折叠文件，也可以直接隐藏已读文件。文件内容再次变化时，标记自动取消。',
-        'f.history.t': '每个提交，一键查看',
-        'f.history.d': 'History 列出当前分支的提交，点开任意一个查看它的改动。给了路径参数时列表也会按路径筛选。',
-        'f.live.t': '边改边看',
-        'f.live.d': 'rediff 监听工作区、index 和 refs。保存文件后约三分之一秒，页面就会更新。',
-        'f.remote.t': '为远程开发机设计',
-        'f.remote.d': '启动时同时打印本机地址和局域网地址，远程机器上的 diff 可以直接在你笔记本的浏览器里打开。每个 URL 都带一次性 token。',
-        'f.huge.t': '超大 diff 依然流畅',
-        'f.huge.d': '文件滚动到时才加载，只渲染可见的行。20 万行的改动也能满帧滚动。',
-        'f.git.t': '和 git 完全一致',
-        'f.git.d': 'rediff 直接调用 git，<code>.gitattributes</code>、重命名检测和你配置的 <code>diff.algorithm</code> 都和 <code>git diff</code> 一致。',
-        'f.keys.t': '键盘优先',
-        'f.keys.d': '<kbd>j</kbd> <kbd>k</kbd> 切换文件，<kbd>/</kbd> 筛选，<kbd>v</kbd> 标记已读，<kbd>c</kbd> 折叠，<kbd>?</kbd> 查看全部快捷键。',
-        'perf.kicker': '// 性能',
-        'perf.title': '快在关键的地方',
-        'perf.lead': '测试对象：505 个文件的对比，其中一个文件改了 20 万行。',
-        'perf.first': '首次加载那个 20 万行改动的文件',
-        'perf.cache': '从服务端缓存再次加载同一文件',
-        'perf.open': '从打开页面到第一批行出现',
-        'perf.live': '从保存文件到页面显示新内容',
-        'install.kicker': '// 安装',
-        'install.title': '一行命令安装',
-        'install.binary': '单个二进制文件，网页界面已内置',
-        'install.platforms': '提供 macOS、Linux、Windows 的 x86_64 和 ARM64 预编译版本',
-        'install.update': '随时运行 <code>rediff-update</code> 升级',
-        'install.source': '从源码构建',
-        'install.foot': '安装到 <code>~/.cargo/bin</code>。从源码构建需要 Rust、Node.js 20+ 和 git。各平台的压缩包见 <a href="https://github.com/rediff-app/rediff/releases">GitHub Releases</a>。',
-        'cta.title': '下一个 diff，用 rediff 来看',
-        'cta.lead': '安装后在任意仓库里运行，在别人看到之前，先自己把改动审一遍。',
-        'cta.install': '安装 rediff',
-        'cta.github': '在 GitHub 上查看',
-        'footer.tagline': '重新设计的 diff 审阅方式。',
-        'footer.releases': '版本发布',
-      };
-
-      const texts = [...document.querySelectorAll('[data-i18n]')].map((el) => [el, el.dataset.i18n, el.innerHTML]);
-      const labels = [...document.querySelectorAll('[data-i18n-label]')].map((el) => [el, el.dataset.i18nLabel, el.getAttribute('aria-label')]);
-      const description = document.querySelector('meta[name="description"]');
-      const en = { title: document.title, description: description.content };
-      const button = document.getElementById('lang');
-
-      function apply(lang) {
-        const isZh = lang === 'zh';
-        for (const [el, key, html] of texts) el.innerHTML = isZh && zh[key] ? zh[key] : html;
-        for (const [el, key, label] of labels) el.setAttribute('aria-label', isZh && zh[key] ? zh[key] : label);
-        document.documentElement.lang = isZh ? 'zh-CN' : 'en';
-        document.title = isZh ? zh['meta.title'] : en.title;
-        description.content = isZh ? zh['meta.description'] : en.description;
-        button.textContent = isZh ? 'English' : '中文';
-        button.lang = isZh ? 'en' : 'zh-CN';
-        button.dataset.next = isZh ? 'en' : 'zh';
-      }
-
-      function stored() {
-        try { return localStorage.getItem('rediff-lang'); } catch { return null; }
-      }
-
-      // English unless ?lang=zh or the visitor picked Chinese with the button; the browser's language is ignored.
-      const param = new URLSearchParams(location.search).get('lang');
-      const initial = param === 'zh' || param === 'en' ? param : stored() === 'zh' ? 'zh' : 'en';
-      apply(initial);
-
-      button.addEventListener('click', () => {
-        const next = button.dataset.next;
-        apply(next);
-        try { localStorage.setItem('rediff-lang', next); } catch {}
+      // Remember an explicit language choice; see the redirect in <head>.
+      const lang = document.getElementById('lang');
+      lang.addEventListener('click', () => {
+        try { localStorage.setItem('rediff-lang', lang.dataset.lang); } catch {}
       });
 
       // Tabs: click or arrow keys switch panels within each command box.
