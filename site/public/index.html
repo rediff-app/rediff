@@ -132,7 +132,9 @@
     h1 del, h1 ins { white-space: nowrap; }
     :lang(zh-CN) h1 { max-width: 12em; letter-spacing: -.02em; word-break: keep-all; }
     .lead { max-width: 640px; margin: 24px auto 0; color: var(--muted); font-size: clamp(17px, 2.2vw, 20px); line-height: 1.55; text-wrap: pretty; }
-    .hero-install { max-width: 640px; margin: 36px auto 0; text-align: left; }
+    .highlights { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; max-width: 760px; margin: 24px auto 0; padding: 0; list-style: none; font-size: 14.5px; font-weight: 500; }
+    .highlights li::before { content: '+'; margin-right: 6px; color: var(--plus); font: 700 14.5px var(--mono); }
+    .hero-install { max-width: 640px; margin: 32px auto 0; text-align: left; }
     .hero-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 20px; margin-top: 20px; color: var(--muted); font-size: 14px; }
     .hero-links .sep { width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
 
@@ -350,6 +352,13 @@
         <p class="eyebrow"><span class="pill">git diff</span><span data-i18n="hero.eyebrow">in your browser, before you push</span></p>
         <h1 data-i18n="hero.title">A <del>new</del> <ins>redesigned</ins> way to review diffs.</h1>
         <p class="lead" data-i18n="hero.lead">rediff opens any git diff in a fast, GitHub-style review page. No pull request, no pushing first: one binary, on your laptop or your remote dev box.</p>
+        <ul class="highlights">
+          <li data-i18n="hero.rust">Written in Rust</li>
+          <li data-i18n="hero.fast">Opens a 200k-line diff in under 300 ms</li>
+          <li data-i18n="hero.binary">One 6–8 MB binary</li>
+          <li data-i18n="hero.memory">~13 MB of memory when idle</li>
+          <li data-i18n="hero.remote">Works on remote dev boxes</li>
+        </ul>
         <div class="hero-install">
           <div class="cmd" data-tabs>
             <div class="tabs" role="tablist">
@@ -634,6 +643,11 @@ make install</code></pre>
         'hero.eyebrow': '在浏览器里看，push 之前就能看',
         'hero.title': '<del>旧的</del> <ins>重新设计的</ins> diff 审阅方式。',
         'hero.lead': 'rediff 把任意 git diff 打开成一个快速的 GitHub 风格审阅页面。不用开 PR，也不用先 push：一个二进制文件，在笔记本或远程开发机上都能用。',
+        'hero.rust': 'Rust 编写',
+        'hero.fast': '20 万行 diff 秒开',
+        'hero.binary': '单个二进制 6–8 MB',
+        'hero.memory': '空闲内存约 13 MB',
+        'hero.remote': '支持远程开发机',
         'hero.github': '在 GitHub 上查看 →',
         'hero.platforms': 'macOS · Linux · Windows',
         'hero.shot': 'rediff 审阅页面，显示一个双栏 diff',
@@ -709,9 +723,9 @@ make install</code></pre>
         try { return localStorage.getItem('rediff-lang'); } catch { return null; }
       }
 
+      // English unless ?lang=zh or the visitor picked Chinese with the button; the browser's language is ignored.
       const param = new URLSearchParams(location.search).get('lang');
-      const initial = param === 'zh' || param === 'en' ? param
-        : stored() || ((navigator.languages || [navigator.language]).some((l) => /^zh\b/i.test(l)) ? 'zh' : 'en');
+      const initial = param === 'zh' || param === 'en' ? param : stored() === 'zh' ? 'zh' : 'en';
       apply(initial);
 
       button.addEventListener('click', () => {

@@ -6,6 +6,8 @@
 
 <p align="center"><strong>A redesigned way to review diffs.</strong></p>
 
+<p align="center">Written in Rust · opens a 200k-line diff in under 300 ms · one 6–8 MB binary · ~13 MB of memory when idle · works on remote dev boxes</p>
+
 <p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
 <picture>

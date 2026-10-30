@@ -6,6 +6,8 @@
 
 <p align="center"><strong>重新设计的 diff 审阅方式。</strong></p>
 
+<p align="center">Rust 编写 · 20 万行 diff 秒开 · 单个二进制 6–8 MB · 空闲内存约 13 MB · 支持远程开发机</p>
+
 <p align="center"><a href="README.md">English</a> | 简体中文</p>
 
 <picture>
