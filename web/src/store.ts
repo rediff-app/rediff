@@ -61,27 +61,6 @@ export const visibleFiles = createMemo(() => {
   );
 });
 
-function storedView(): 'unified' | 'split' {
-  try { return localStorage.getItem('rediff.diffView') === 'split' ? 'split' : 'unified'; }
-  catch { return 'unified'; }
-}
-export const [diffView, setDiffView] = createSignal(storedView());
-export function changeDiffView(view: 'unified' | 'split') {
-  setDiffView(view);
-  try { localStorage.setItem('rediff.diffView', view); } catch { /* Optional preference. */ }
-}
-
-function storedWrapLines(): boolean {
-  try { return localStorage.getItem('rediff.wrapLines') !== '0'; }
-  catch { return true; }
-}
-export const [wrapLines, setWrapLines] = createSignal(storedWrapLines());
-export function toggleWrapLines() {
-  const wrap = !wrapLines();
-  setWrapLines(wrap);
-  try { localStorage.setItem('rediff.wrapLines', wrap ? '1' : '0'); } catch { /* Optional preference. */ }
-}
-
 const loaded = new Map<string, Loaded>();
 const collapsedOverride = new Map<string, boolean>();
 const [tick, setTick] = createSignal(0);

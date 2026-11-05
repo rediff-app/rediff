@@ -6,7 +6,6 @@ import { RowLayout } from './rowLayout';
 import {
   current,
   visibleFiles as files,
-  diffView,
   getLoaded,
   isCollapsed,
   isViewed,
@@ -16,10 +15,10 @@ import {
   toggleCollapsed,
   toggleViewed,
   want,
-  wrapLines,
   type Loaded,
   type RowItem,
 } from './store';
+import { diffView, wrapLines } from './settings';
 import { ADD, DEL, HUNK, type FileEntry } from './types';
 
 // One visual line and the file header. Keep in sync with style.css.

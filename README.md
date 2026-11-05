@@ -33,15 +33,28 @@ rediff --help               # all options: -U, --algorithm, --host, --port, --no
 
 The page follows GitHub's Files changed layout: a filterable file tree on the left, and per-file diffs on the right. The history button at the left of the toolbar opens the commit list for the current branch (100 commits at a time, with more on demand). Click a commit to see its changes (against its first parent; a root commit is compared against the empty tree); the top entry returns to the diff given on the command line. When paths are given, the list only shows commits that touched those paths.
 
-- **Diff view**: Unified / Split toggles between a unified and a side-by-side diff, and remembers your choice. Wrap is on by default: long lines wrap to the width of the code area, and both sides of the split view stay aligned. With Wrap off, use the horizontal scrollbar at the bottom, a trackpad swipe, or Shift + wheel to see the full code (both sides scroll together), while file headers and line numbers stay fixed. The wrap preference is saved.
+- **Diff view**: Unified / Split toggles between a unified and a side-by-side diff, and remembers your choice in the [settings](#settings). Wrap is on by default: long lines wrap to the width of the code area, and both sides of the split view stay aligned. With Wrap off, use the horizontal scrollbar at the bottom, a trackpad swipe, or Shift + wheel to see the full code (both sides scroll together), while file headers and line numbers stay fixed. The wrap preference is saved too.
 - **File navigation**: filter by path (also matches the pre-rename path); the toolbar has previous / next file and collapse / expand all. On narrow screens the file tree and commit list open as floating panels.
 - **Review progress**: checking Viewed collapses a file, and Hide viewed files hides the ones you've read. Marks are kept per comparison and file version for the current page session: they clear automatically when a file's content changes, and are lost on reload.
 - **Lines and paths**: click a line number to highlight a line, Shift + click to select a range on the same side; copy a file's full path from next to its header.
 - **Keyboard shortcuts**: `j` / `k` to move between files, `/` to filter, `v` to mark as viewed, `c` to collapse / expand, `?` for help. Navigation shortcuts don't fire while typing in an input.
+- **Themes**: light and dark, or System to follow the operating system's preference (the default). Pick one in the settings.
 
 On startup it prints two addresses: a local one (`local`) and a LAN one (`network`, the IP of the interface on the default route). When running on a remote dev machine, you can open the `network` address directly in the browser on your own computer. The URL carries a one-time token; the API can't be read without it. Add `--host 127.0.0.1` for local-only access.
 
 Note that LAN access is plain HTTP: anyone on the same network who can sniff traffic can see the token and the diff contents. On untrusted networks, use `--host 127.0.0.1` with SSH port forwarding.
+
+## Settings
+
+The settings button at the right of the top bar picks the theme, the diff layout and whether long lines wrap. They apply at once and are saved as YAML in `~/.rediff/config.yml`, shared by every rediff you run. You can also edit the file by hand; open pages pick up the change when reloaded:
+
+```yaml
+theme: dark      # system, light or dark
+layout: split    # unified or split
+wrap: true       # wrap long lines, or scroll them sideways
+```
+
+Missing keys take their defaults (`system`, `unified`, `true`). If the file doesn't parse, rediff says so on startup and in the settings dialog, uses the defaults, and won't overwrite the file until it is fixed.
 
 ## Install
 
@@ -84,10 +97,13 @@ src/
   git.rs      git commands: file list (--raw --numstat -z), per-file patch, untracked files, commit list
   patch.rs    parses a patch into a compact line array + inline (word-level) diff
   server.rs   axum routes, token auth, diff cache, per-commit file list cache, SSE push
+  config.rs   user settings in ~/.rediff/config.yml
   watch.rs    watches the working tree / index / refs and pushes changes to the frontend
   assets.rs   frontend assets embedded with rust-embed
 web/src/
   store.ts          file list, on-demand diff loading queue, collapse state, selected commit
+  settings.ts       theme, diff layout and wrap settings, saved through the server
+  Settings.tsx      settings dialog
   Commits.tsx       commit list (leftmost column)
   Sidebar.tsx       directory tree sidebar (single-child directory chains compacted, collapsible directories)
   tree.ts           tree sorting and building: directories first at each level, natural sort; the diff area uses the same order

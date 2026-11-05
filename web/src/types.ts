@@ -34,6 +34,24 @@ export interface CommitLog {
   more: boolean;
 }
 
+export type Theme = 'system' | 'light' | 'dark';
+export type Layout = 'unified' | 'split';
+
+/** Saved in ~/.rediff/config.yml. */
+export interface Settings {
+  theme: Theme;
+  layout: Layout;
+  wrap: boolean;
+}
+
+export interface SettingsFile {
+  /** absent without a home directory to save in */
+  path?: string;
+  settings: Settings;
+  /** why the saved settings can't be read; `settings` are the defaults then */
+  error?: string;
+}
+
 export const CTX = 0;
 export const ADD = 1;
 export const DEL = 2;

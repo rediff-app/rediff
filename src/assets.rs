@@ -9,15 +9,29 @@ use rust_embed::RustEmbed;
 #[allow_missing = true]
 struct Assets;
 
-pub async fn serve(uri: Uri) -> Response {
-    let path = match uri.path().trim_start_matches('/') {
-        "" => "index.html",
-        p => p,
+/// The app's page, with `theme` on its `<html>` element.
+pub fn index(theme: &str) -> Response {
+    let Some(file) = Assets::get("index.html") else {
+        return (StatusCode::NOT_FOUND, "frontend not built: run `make web`").into_response();
     };
+    let html = String::from_utf8_lossy(&file.data).replacen(
+        "<html",
+        &format!("<html data-theme=\"{theme}\""),
+        1,
+    );
+    (
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-cache"),
+        ],
+        html,
+    )
+        .into_response()
+}
+
+pub async fn serve(uri: Uri) -> Response {
+    let path = uri.path().trim_start_matches('/');
     let Some(file) = Assets::get(path) else {
-        if path == "index.html" {
-            return (StatusCode::NOT_FOUND, "frontend not built: run `make web`").into_response();
-        }
         return StatusCode::NOT_FOUND.into_response();
     };
     // Vite puts a content hash in every file name under assets/, so those never change.

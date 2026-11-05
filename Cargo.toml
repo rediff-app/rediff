@@ -33,3 +33,4 @@ similar = "3.2.1"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "process", "net", "sync", "time"] }
 tokio-stream = { version = "0.1.19", features = ["sync"] }
 tower-http = { version = "0.7.1", features = ["compression-gzip", "compression-br", "compression-zstd"] }
+yaml_serde = "0.10.7"

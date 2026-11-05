@@ -1,4 +1,5 @@
 mod assets;
+mod config;
 mod git;
 mod patch;
 mod server;
@@ -78,9 +79,14 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("cannot listen on {}", SocketAddr::new(cli.host, cli.port)))?;
     let port = listener.local_addr()?.port();
+    let config = config::Config::new();
+    if let Err(e) = config.load() {
+        eprintln!("rediff: {e:#}; using the default settings");
+    }
     let state = Arc::new(server::AppState::new(
         repo,
         new_token()?,
+        config,
         port,
         !cli.no_watch,
     ));
