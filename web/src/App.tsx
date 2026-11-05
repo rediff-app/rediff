@@ -4,12 +4,13 @@ import { subscribe } from './api';
 import { CommitList } from './Commits';
 import { DiffView } from './DiffView';
 import { Icon } from './Icon';
+import { SettingsDialog } from './Settings';
+import { changeDiffView, diffView, loadSettings, toggleWrapLines, wrapLines } from './settings';
 import { Sidebar } from './Sidebar';
 import {
-  changeDiffView, collapseAll, commits, current, diffView, errorText, files, filterQuery,
+  collapseAll, commits, current, errorText, files, filterQuery,
   isCollapsed, live, refresh, refreshCommits, scrollToFile, setFilterQuery, setLive,
   setUnviewedOnly, status, title, toggleCollapsed, toggleViewed, unviewedOnly, viewedCount, visibleFiles,
-  toggleWrapLines, wrapLines,
 } from './store';
 
 const COMMITS_KEY = 'rediff.showCommits';
@@ -23,6 +24,7 @@ export function App() {
   const [showFiles, setShowFiles] = createSignal(window.innerWidth > 900);
   const [refreshing, setRefreshing] = createSignal(false);
   let shortcuts!: HTMLDialogElement;
+  let settings!: HTMLDialogElement;
   const toggleCommits = () => {
     const show = !showCommits();
     setShowCommits(show);
@@ -42,11 +44,12 @@ export function App() {
   const clearFilters = () => { setFilterQuery(''); setUnviewedOnly(false); };
 
   onMount(() => {
+    void loadSettings();
     void reload();
     onCleanup(subscribe(() => { void refresh(); void refreshCommits(); }, setLive));
     const onKey = (e: KeyboardEvent) => {
       const target = e.target;
-      if (e.metaKey || e.ctrlKey || e.altKey || shortcuts.open ||
+      if (e.metaKey || e.ctrlKey || e.altKey || shortcuts.open || settings.open ||
         (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, button')))) return;
       const f = visibleFiles()[current()];
       if (e.key === 'j') scrollToFile(current() + 1);
@@ -82,6 +85,7 @@ export function App() {
             <Icon name="refresh" class={refreshing() ? 'spin' : ''} />
           </button>
           <button class="icon-button shortcut-button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => shortcuts.showModal()}><Icon name="keyboard" /></button>
+          <button class="icon-button" aria-label="Settings" title="Settings" onClick={() => settings.showModal()}><Icon name="settings" /></button>
         </div>
       </header>
 
@@ -139,6 +143,7 @@ export function App() {
           <dl><dt>Next / previous file</dt><dd><kbd>j</kbd> <kbd>k</kbd></dd><dt>Filter files</dt><dd><kbd>/</kbd></dd><dt>Mark file as viewed</dt><dd><kbd>v</kbd></dd><dt>Collapse / expand file</dt><dd><kbd>c</kbd></dd><dt>Show shortcuts</dt><dd><kbd>?</kbd></dd></dl>
         </div>
       </dialog>
+      <SettingsDialog ref={settings} />
     </div>
   );
 }

@@ -33,7 +33,14 @@ function addStyle([id, light, dark, fontStyle]: Style) {
     (fontStyle & 2 ? 'font-weight:600;' : '') +
     (fontStyle & 4 ? 'text-decoration:underline;' : '');
   sheet.insertRule(`.t${id}{${light ? `color:${light};` : ''}${font}}`, sheet.cssRules.length);
-  if (dark) sheet.insertRule(`@media (prefers-color-scheme: dark){.t${id}{color:${dark}}}`, sheet.cssRules.length);
+  if (!dark) return;
+  // The dark theme, chosen or followed from the system (see style.css).
+  // Not light-dark(): these rules bypass the build's fallback for older browsers.
+  sheet.insertRule(`:root[data-theme=dark] .t${id}{color:${dark}}`, sheet.cssRules.length);
+  sheet.insertRule(
+    `@media (prefers-color-scheme: dark){:root:not([data-theme=light]) .t${id}{color:${dark}}}`,
+    sheet.cssRules.length,
+  );
 }
 
 function getWorker(): Worker {

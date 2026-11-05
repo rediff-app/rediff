@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{Query, Request, State};
+use axum::extract::{Json, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::sse::{Event, KeepAlive, Sse};
@@ -21,6 +21,7 @@ use tokio_stream::{Stream, StreamExt};
 use tower_http::compression::{CompressionLayer, CompressionLevel};
 
 use crate::assets;
+use crate::config::{Config, Patch, Settings};
 use crate::git::{Commit, FileEntry, Repo, Spec};
 use crate::patch;
 
@@ -34,6 +35,7 @@ const MAX_COMMITS: usize = 10_000;
 pub struct AppState {
     pub repo: Repo,
     pub token: String,
+    pub config: Config,
     /// Without a watcher, every file list request recomputes the listing.
     watching: bool,
     /// Cookies are shared across ports, so each instance gets its own name.
@@ -79,10 +81,11 @@ struct CommitsBody<'a> {
 }
 
 impl AppState {
-    pub fn new(repo: Repo, token: String, port: u16, watching: bool) -> Self {
+    pub fn new(repo: Repo, token: String, config: Config, port: u16, watching: bool) -> Self {
         AppState {
             repo,
             token,
+            config,
             watching,
             cookie: format!("rediff_{port}"),
             generation: AtomicU64::new(0),
@@ -217,9 +220,11 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/diff", get(diff))
         .route("/api/commits", get(commits))
         .route("/api/events", get(events))
+        .route("/api/settings", get(settings).patch(update_settings))
         .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
     Router::new()
         .merge(api)
+        .route("/", get(index))
         .route("/auth", get(auth))
         .fallback(assets::serve)
         // Fast levels: on a local connection CPU time matters more than bytes.
@@ -336,6 +341,49 @@ async fn events(
             .data(g.map(|g| g.to_string()).unwrap_or_default()))
     });
     Sse::new(stream).keep_alive(KeepAlive::default())
+}
+
+#[derive(Serialize)]
+struct SettingsBody {
+    /// Where settings are saved; absent without a home directory.
+    path: Option<String>,
+    settings: Settings,
+    /// Why the saved settings can't be read; `settings` are the defaults then.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+fn settings_response(config: &Config, settings: Result<Settings>) -> Result<Response, AppError> {
+    let (settings, error) = match settings {
+        Ok(s) => (s, None),
+        Err(e) => (Settings::default(), Some(format!("{e:#}"))),
+    };
+    let body = SettingsBody {
+        path: config.path().map(|p| p.display().to_string()),
+        settings,
+        error,
+    };
+    Ok(json_no_store(serde_json::to_vec(&body)?.into()))
+}
+
+/// Settings are read on every request: they may also be edited by hand or by
+/// another rediff.
+async fn settings(State(st): State<Arc<AppState>>) -> Result<Response, AppError> {
+    settings_response(&st.config, st.config.load())
+}
+
+async fn update_settings(
+    State(st): State<Arc<AppState>>,
+    Json(patch): Json<Patch>,
+) -> Result<Response, AppError> {
+    let saved = st.config.update(patch)?;
+    settings_response(&st.config, Ok(saved))
+}
+
+/// The page, carrying the saved theme so that its first paint is already in it.
+async fn index(State(st): State<Arc<AppState>>) -> Response {
+    let theme = st.config.load().map(|s| s.theme).unwrap_or_default();
+    assets::index(theme.as_str())
 }
 
 #[derive(Deserialize)]
